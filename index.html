@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Palette&MoodBoard</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+ <!-- App Stylesheet -->
+  <link rel="stylesheet" href="./css/site.css">
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
+
+  <!-- Toast Notification System -->
+  <div id="toast" role="status" aria-live="polite" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 pointer-events-none transition-all duration-300 flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-900/95 border border-slate-700/80 shadow-2xl text-sm font-medium text-slate-100 backdrop-blur-md">
+    <div id="toast-icon" class="p-1 rounded-lg bg-indigo-500/20 text-indigo-400">
+      <i data-lucide="check" class="w-4 h-4"></i>
+    </div>
+    <span id="toast-msg">Copied to clipboard!</span>
+  </div>
+
+  <!-- Header & Navigation -->
+  <header class="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/80 px-4 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-violet-600 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+        <i data-lucide="sparkles" class="w-5 h-5 text-white"></i>
+      </div>
+      <div>
+        <h1 class="font-bold text-base sm:text-lg tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">Palette&MoodBoard</h1>
+        <p class="text-xs text-slate-400 hidden sm:block">Color Extraction & Mood Board Compositing</p>
+      </div>
+    </div>
+
+    <!-- Mode Selector Tabs -->
+    <div class="flex items-center p-1 bg-slate-900 rounded-xl border border-slate-800 text-xs sm:text-sm font-semibold">
+      <button type="button" id="tab-palette" role="tab" aria-selected="true" class="flex items-center gap-2 px-3.5 py-1.5 rounded-lg transition-all text-white bg-indigo-600 shadow-md">
+        <i data-lucide="palette" class="w-4 h-4"></i>
+        <span>Palette Extractor</span>
+      </button>
+      <button type="button" id="tab-moodboard" role="tab" aria-selected="false" class="flex items-center gap-2 px-3.5 py-1.5 rounded-lg transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">
+        <i data-lucide="layout-grid" class="w-4 h-4"></i>
+        <span>Mood Board</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="flex-1 max-w-[96rem] w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col gap-6">
+
+    <!-- ========================================================================= -->
+    <!-- SECTION 1: PALETTE EXTRACTOR -->
+    <!-- ========================================================================= -->
+    <div id="section-palette" role="tabpanel" aria-labelledby="tab-palette" class="flex flex-col gap-6">
+      
+      <!-- Top Bar / Controls & Upload -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- Left: Upload Card / Options -->
+        <div class="lg:col-span-4 flex flex-col gap-4">
+          <!-- Dropzone -->
+          <div id="palette-dropzone" class="relative group cursor-pointer border-2 border-dashed border-slate-700 hover:border-indigo-500/80 rounded-2xl p-6 bg-slate-900/50 transition-all flex flex-col items-center justify-center text-center gap-3">
+            <input type="file" id="palette-file-input" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10" />
+            <div class="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center text-slate-300 group-hover:text-indigo-400 group-hover:scale-110 group-hover:bg-indigo-500/10 transition-all">
+              <i data-lucide="image-up" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-slate-200 group-hover:text-white">Upload image or drop here</p>
+              <p class="text-xs text-slate-400 mt-0.5">Supports PNG, JPG, WebP, GIF • Paste (Ctrl+V)</p>
+            </div>
+            <button class="px-3.5 py-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700/60 pointer-events-none">
+              Browse Image
+            </button>
+          </div>
+
+          <!-- Controls Panel -->
+          <div class="bg-slate-900/80 border border-slate-800/80 rounded-2xl p-5 flex flex-col gap-5">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Extractor Settings</span>
+              <button id="btn-sample-palette" class="text-xs font-medium text-indigo-400 hover:text-indigo-300 flex items-center gap-1 transition-colors">
+                <i data-lucide="shuffle" class="w-3.5 h-3.5"></i> Sample Image
+              </button>
+            </div>
+
+            <!-- Number of Swatches -->
+            <div class="flex flex-col gap-2">
+              <div class="flex justify-between items-center text-xs font-semibold">
+                <label for="palette-count" class="text-slate-300">Swatches Count (k-means)</label>
+                <span id="palette-count-label" class="px-2 py-0.5 bg-indigo-500/20 text-indigo-400 rounded-md font-mono text-xs font-bold">5 Colors</span>
+              </div>
+              <input type="range" id="palette-count" min="3" max="10" value="5" class="w-full" />
+              <div class="relative h-3 text-[10px] text-slate-500 font-mono">
+                <span class="absolute" style="left:0%">3</span>
+                <span class="absolute" style="left:28.5714%; transform:translateX(-50%)">5</span>
+                <span class="absolute" style="left:57.1429%; transform:translateX(-50%)">7</span>
+                <span class="absolute" style="left:100%; transform:translateX(-100%)">10</span>
+              </div>
+            </div>
+
+            <!-- Sorting order -->
+            <div class="flex flex-col gap-2">
+              <label class="text-xs font-semibold text-slate-300">Palette Sorting</label>
+              <div class="grid grid-cols-3 gap-1.5 p-1 bg-slate-950 rounded-xl border border-slate-800 text-xs">
+                <button type="button" id="sort-prominence" aria-pressed="true" class="py-1.5 rounded-lg font-medium transition-all text-white bg-indigo-600">Dominance</button>
+                <button type="button" id="sort-luminance" aria-pressed="false" class="py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">Luminance</button>
+                <button type="button" id="sort-hue" aria-pressed="false" class="py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">Hue</button>
+              </div>
+            </div>
+
+            <!-- Theme Transform -->
+            <div class="flex flex-col gap-2">
+              <label class="text-xs font-semibold text-slate-300">Theme Transform</label>
+              <div id="theme-button-group" class="grid grid-cols-3 gap-1.5 p-1 bg-slate-950 rounded-xl border border-slate-800 text-xs">
+                <button type="button" id="theme-original" data-theme="original" aria-pressed="true" class="py-1.5 rounded-lg font-medium transition-all text-white bg-indigo-600">Original</button>
+                <button type="button" id="theme-pastel" data-theme="pastel" aria-pressed="false" class="py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">Pastel</button>
+                <button type="button" id="theme-neon" data-theme="neon" aria-pressed="false" class="py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">Neon</button>
+                <button type="button" id="theme-muted" data-theme="muted" aria-pressed="false" class="py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">Muted</button>
+                <button type="button" id="theme-vivid" data-theme="vivid" aria-pressed="false" class="py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">Vivid</button>
+                <button type="button" id="theme-dark" data-theme="dark" aria-pressed="false" class="py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">Dark</button>
+              </div>
+            </div>
+
+            <!-- Harmony Schemes -->
+            <div class="flex flex-col gap-2">
+              <div class="flex justify-between items-center">
+                <label class="text-xs font-semibold text-slate-300">Harmony Scheme</label>
+                <div class="flex items-center gap-1.5 text-[10px] text-slate-400">
+                  <span>Base:</span>
+                  <span id="palette-base-color-swatch" class="w-4 h-4 rounded-full border border-slate-600 inline-block" style="background-color:#6366f1"></span>
+                  <span id="palette-base-color-label" class="font-mono">—</span>
+                </div>
+              </div>
+              <div id="harmony-button-group" class="grid grid-cols-4 gap-1.5 p-1 bg-slate-950 rounded-xl border border-slate-800 text-xs">
+                <button type="button" id="harmony-complementary" data-harmony="complementary" aria-pressed="false" class="py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">Compl.</button>
+                <button type="button" id="harmony-analogous" data-harmony="analogous" aria-pressed="false" class="py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">Analog.</button>
+                <button type="button" id="harmony-triadic" data-harmony="triadic" aria-pressed="false" class="py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">Triadic</button>
+                <button type="button" id="harmony-tetradic" data-harmony="tetradic" aria-pressed="false" class="py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">Tetradic</button>
+              </div>
+              <p class="text-[10px] text-slate-500">Shift-click a swatch to set it as the harmony base color.</p>
+            </div>
+
+            <!-- Strip Layout Options -->
+            <div class="flex flex-col gap-2">
+              <label class="text-xs font-semibold text-slate-300">Swatch Strip Style</label>
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <label class="flex items-center gap-2 p-2.5 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer hover:border-slate-700">
+                  <input type="checkbox" id="show-hex-text" checked class="rounded border-slate-700 text-indigo-600 focus:ring-0 bg-slate-900" />
+                  <span class="text-slate-300 font-medium">Hex Labels</span>
+                </label>
+                <label class="flex items-center gap-2 p-2.5 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer hover:border-slate-700">
+                  <input type="checkbox" id="show-rgb-text" class="rounded border-slate-700 text-indigo-600 focus:ring-0 bg-slate-900" />
+                  <span class="text-slate-300 font-medium">RGB Values</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Download Button -->
+            <button id="btn-download-palette" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold text-sm shadow-lg shadow-indigo-600/25 flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
+              <i data-lucide="download" class="w-4 h-4"></i>
+              <span>Download Composite (Image + Strip)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Right: Preview and Swatches Area -->
+        <div class="lg:col-span-8 flex flex-col gap-4">
+          
+          <!-- Interactive Swatches Grid -->
+          <div class="bg-slate-900/80 border border-slate-800/80 rounded-2xl p-4 sm:p-5 flex flex-col gap-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Extracted Palette (Click to Copy HEX)</span>
+              <span class="text-xs text-slate-400 flex items-center gap-1">
+                <i data-lucide="copy" class="w-3.5 h-3.5"></i> Tap swatch
+              </span>
+            </div>
+            
+            <div id="swatches-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 min-h-[90px]">
+              <!-- Swatch chips rendered here -->
+            </div>
+          </div>
+
+          <!-- Composite Preview Card -->
+          <div class="bg-slate-900/80 border border-slate-800/80 rounded-2xl p-4 sm:p-5 flex flex-col gap-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Composite Preview</span>
+              <span id="palette-img-dimensions" class="text-xs font-mono text-slate-500">No Image</span>
+            </div>
+
+            <div class="relative w-full rounded-xl bg-slate-950/70 border border-slate-800 overflow-hidden flex items-center justify-center min-h-[340px] max-h-[580px] p-2 sm:p-4">
+              <canvas id="palette-composite-canvas" class="max-w-full max-h-[500px] h-auto rounded-lg object-contain shadow-2xl border border-slate-800/80"></canvas>
+
+              <!-- Empty state placeholder -->
+              <div id="palette-empty-state" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500 gap-3 p-6 text-center">
+                <div class="w-14 h-14 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400">
+                  <i data-lucide="palette" class="w-7 h-7"></i>
+                </div>
+                <div>
+                  <p class="text-sm font-semibold text-slate-300">No image loaded</p>
+                  <p class="text-xs text-slate-500 mt-1">Upload an image or tap "Sample Image" above to extract colors.</p>
+                </div>
+              </div>
+
+              <!-- Loading overlay -->
+              <div id="palette-loading" class="hidden absolute inset-0 flex items-center justify-center bg-slate-950/60 z-10" role="status" aria-live="polite">
+                <div class="spinner" aria-hidden="true"></div>
+                <span class="sr-only">Processing image…</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- ========================================================================= -->
+    <!-- SECTION 2: MOOD BOARD BUILDER -->
+    <!-- ========================================================================= -->
+    <div id="section-moodboard" role="tabpanel" aria-labelledby="tab-moodboard" class="hidden flex flex-col gap-6">
+      
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- Controls Column -->
+        <div class="lg:col-span-3 flex flex-col gap-4">
+
+          <!-- Dropzone for multiple files -->
+          <div id="mb-dropzone" class="relative group cursor-pointer border-2 border-dashed border-slate-700 hover:border-indigo-500/80 rounded-2xl p-6 bg-slate-900/50 transition-all flex flex-col items-center justify-center text-center gap-3">
+            <input type="file" id="mb-file-input" accept="image/*" multiple class="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10" />
+            <div class="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center text-slate-300 group-hover:text-indigo-400 group-hover:scale-110 group-hover:bg-indigo-500/10 transition-all">
+              <i data-lucide="images" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-slate-200 group-hover:text-white">Add Images to Mood Board</p>
+              <p class="text-xs text-slate-400 mt-0.5">Select multiple images • Drag & Drop</p>
+            </div>
+            <button class="px-3.5 py-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700/60 pointer-events-none">
+              Upload Batch
+            </button>
+          </div>
+
+          <!-- Board Settings Panel -->
+          <div class="bg-slate-900/80 border border-slate-800/80 rounded-2xl p-5 flex flex-col gap-4">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Layout Settings</span>
+              <button id="btn-load-sample-board" class="text-xs font-medium text-indigo-400 hover:text-indigo-300 flex items-center gap-1 transition-colors">
+                <i data-lucide="layout-template" class="w-3.5 h-3.5"></i> Sample Board
+              </button>
+            </div>
+
+            <!-- Layout Mode -->
+            <div class="flex flex-col gap-2">
+              <label class="text-xs font-semibold text-slate-300">Layout Mode</label>
+              <div class="grid grid-cols-2 gap-1 p-1 bg-slate-950 rounded-xl border border-slate-800">
+                <button type="button" id="mb-mode-grid" aria-pressed="true" class="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-white bg-indigo-600">
+                  <i data-lucide="grid-3x3" class="w-3.5 h-3.5"></i> Grid
+                </button>
+                <button type="button" id="mb-mode-dynamic" aria-pressed="false" class="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-slate-200">
+                  <i data-lucide="move" class="w-3.5 h-3.5"></i> Dynamic
+                </button>
+              </div>
+            </div>
+
+            <!-- Sticky Notes (Dynamic mode only) -->
+            <div class="mb-dynamic-only hidden flex flex-col gap-2">
+              <label class="text-xs font-semibold text-slate-300">Sticky Notes</label>
+              <button type="button" id="btn-add-sticky" class="w-full py-2 px-3 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 text-xs font-semibold flex items-center justify-center gap-2 transition-all border border-amber-500/30">
+                <i data-lucide="sticky-note" class="w-3.5 h-3.5"></i> Add Sticky Note
+              </button>
+              <p class="text-[10px] text-slate-500">Drag items to move them, double-click a note to edit its text, or select an item and use arrow keys to nudge it.</p>
+            </div>
+
+            <!-- Columns Selector -->
+            <div class="mb-grid-only flex flex-col gap-2">
+              <div class="flex justify-between items-center text-xs font-semibold">
+                <label class="text-slate-300">Columns Count</label>
+                <span id="mb-cols-label" class="px-2 py-0.5 bg-indigo-500/20 text-indigo-400 rounded-md font-mono text-xs font-bold">3 Cols</span>
+              </div>
+              <div class="grid grid-cols-5 gap-1 p-1 bg-slate-950 rounded-xl border border-slate-800 text-xs text-center">
+                <button type="button" class="mb-col-btn py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200" data-cols="1" aria-pressed="false">1</button>
+                <button type="button" class="mb-col-btn py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200" data-cols="2" aria-pressed="false">2</button>
+                <button type="button" class="mb-col-btn py-1.5 rounded-lg font-medium transition-all text-white bg-indigo-600" data-cols="3" aria-pressed="true">3</button>
+                <button type="button" class="mb-col-btn py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200" data-cols="4" aria-pressed="false">4</button>
+                <button type="button" class="mb-col-btn py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200" data-cols="5" aria-pressed="false">5</button>
+              </div>
+            </div>
+
+            <!-- Gutter / Spacing Slider -->
+            <div class="mb-grid-only flex flex-col gap-2">
+              <div class="flex justify-between items-center text-xs font-semibold">
+                <label for="mb-gutter" class="text-slate-300">Gutter / Spacing</label>
+                <span id="mb-gutter-label" class="text-slate-400 font-mono text-xs">16 px</span>
+              </div>
+              <input type="range" id="mb-gutter" min="0" max="64" value="16" class="w-full" />
+            </div>
+
+            <!-- Board Padding Slider -->
+            <div class="mb-grid-only flex flex-col gap-2">
+              <div class="flex justify-between items-center text-xs font-semibold">
+                <label for="mb-padding" class="text-slate-300">Outer Margin</label>
+                <span id="mb-padding-label" class="text-slate-400 font-mono text-xs">24 px</span>
+              </div>
+              <input type="range" id="mb-padding" min="0" max="80" value="24" class="w-full" />
+            </div>
+
+            <!-- Corner Radius Slider -->
+            <div class="mb-grid-only flex flex-col gap-2">
+              <div class="flex justify-between items-center text-xs font-semibold">
+                <label for="mb-radius" class="text-slate-300">Corner Radius</label>
+                <span id="mb-radius-label" class="text-slate-400 font-mono text-xs">12 px</span>
+              </div>
+              <input type="range" id="mb-radius" min="0" max="40" value="12" class="w-full" />
+            </div>
+
+            <!-- Aspect Ratio for Cells -->
+            <div class="mb-grid-only flex flex-col gap-2">
+              <label class="text-xs font-semibold text-slate-300">Cell Aspect Ratio</label>
+              <div class="grid grid-cols-4 gap-1 p-1 bg-slate-950 rounded-xl border border-slate-800 text-xs text-center">
+                <button type="button" class="mb-ratio-btn py-1.5 rounded-lg font-medium transition-all text-white bg-indigo-600" data-ratio="1:1" aria-pressed="true">1:1</button>
+                <button type="button" class="mb-ratio-btn py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200" data-ratio="4:3" aria-pressed="false">4:3</button>
+                <button type="button" class="mb-ratio-btn py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200" data-ratio="3:4" aria-pressed="false">3:4</button>
+                <button type="button" class="mb-ratio-btn py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200" data-ratio="16:9" aria-pressed="false">16:9</button>
+              </div>
+            </div>
+
+            <!-- Canvas Background Color -->
+            <div class="flex flex-col gap-2">
+              <label class="text-xs font-semibold text-slate-300">Background Canvas Color</label>
+              <div class="flex items-center gap-2">
+                <button type="button" data-bg="#0f172a" class="w-7 h-7 rounded-lg bg-slate-900 border-2 border-indigo-500 shadow-sm transition-transform hover:scale-105" title="Dark Slate" aria-label="Dark Slate background"></button>
+                <button type="button" data-bg="#000000" class="w-7 h-7 rounded-lg bg-black border border-slate-700 shadow-sm transition-transform hover:scale-105" title="Pure Black" aria-label="Pure Black background"></button>
+                <button type="button" data-bg="#ffffff" class="w-7 h-7 rounded-lg bg-white border border-slate-700 shadow-sm transition-transform hover:scale-105" title="Clean White" aria-label="Clean White background"></button>
+                <button type="button" data-bg="#f5f5f4" class="w-7 h-7 rounded-lg bg-stone-100 border border-slate-700 shadow-sm transition-transform hover:scale-105" title="Warm Stone" aria-label="Warm Stone background"></button>
+                <button type="button" data-bg="#1e1b4b" class="w-7 h-7 rounded-lg bg-indigo-950 border border-slate-700 shadow-sm transition-transform hover:scale-105" title="Midnight Indigo" aria-label="Midnight Indigo background"></button>
+                <div class="relative flex-1 flex items-center">
+                  <input type="color" id="mb-custom-bg" value="#0f172a" class="w-full h-8 rounded-lg bg-transparent border border-slate-700 cursor-pointer p-0.5" aria-label="Custom background color" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Download Button -->
+            <button id="btn-download-moodboard" class="w-full mt-2 py-3 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold text-sm shadow-lg shadow-indigo-600/25 flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
+              <i data-lucide="download" class="w-4 h-4"></i>
+              <span>Download High-Res Board PNG</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Right: Images Organizer & Preview -->
+        <div class="lg:col-span-9 flex flex-col gap-4">
+
+          <!-- Board Images Strip (For reordering & deleting) -->
+          <div class="bg-slate-900/80 border border-slate-800/80 rounded-2xl p-4 sm:p-5 flex flex-col gap-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-400">
+                Board Items (<span id="mb-items-count">0</span> images)
+              </span>
+              <div class="flex items-center gap-3">
+                <button type="button" id="btn-extract-selected" disabled class="text-xs font-medium text-indigo-400 hover:text-indigo-300 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors">
+                  <i data-lucide="pipette" class="w-3.5 h-3.5"></i> Extract Palette
+                </button>
+                <button type="button" id="btn-clear-board" class="text-xs font-medium text-rose-400 hover:text-rose-300 flex items-center gap-1 transition-colors">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Clear All
+                </button>
+              </div>
+            </div>
+
+            <!-- Extracted swatches from a selected board image -->
+            <div id="mb-extracted-swatches" class="hidden grid grid-cols-5 gap-2"></div>
+
+            <!-- Thumbnails Container -->
+            <div id="mb-thumbs-list" class="flex gap-3 overflow-x-auto pb-2 min-h-[85px] items-center">
+              <p class="text-xs text-slate-500 italic py-3">No images added yet. Add photos above.</p>
+            </div>
+          </div>
+
+          <!-- Composite Board Preview -->
+          <div class="bg-slate-900/80 border border-slate-800/80 rounded-2xl p-4 sm:p-5 flex flex-col gap-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Mood Board Preview</span>
+              <span id="mb-canvas-dimensions" class="text-xs font-mono text-slate-500">Ready</span>
+            </div>
+
+            <div class="relative w-full rounded-xl bg-slate-950/70 border border-slate-800 overflow-hidden flex items-center justify-center min-h-[520px] max-h-[80vh] p-3 sm:p-6">
+              <canvas id="mb-composite-canvas" class="max-w-full max-h-[76vh] h-auto rounded-lg object-contain shadow-2xl border border-slate-800/80"></canvas>
+
+              <!-- Dynamic mode free-form canvas -->
+              <div id="mb-dynamic-canvas" class="hidden relative w-full rounded-lg shadow-2xl border border-slate-800/80" style="aspect-ratio: 1.6 / 1; max-height: 76vh;" tabindex="0" role="group" aria-label="Dynamic mood board canvas. Drag items to move them; select an item and use arrow keys to nudge it."></div>
+
+              <!-- Empty state placeholder -->
+              <div id="mb-empty-state" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500 gap-3 p-6 text-center">
+                <div class="w-14 h-14 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400">
+                  <i data-lucide="layout-grid" class="w-7 h-7"></i>
+                </div>
+                <div>
+                  <p class="text-sm font-semibold text-slate-300">Mood board is empty</p>
+                  <p class="text-xs text-slate-500 mt-1">Upload multiple photos or tap "Sample Board" to generate a board.</p>
+                </div>
+              </div>
+
+              <!-- Loading overlay -->
+              <div id="mb-loading" class="hidden absolute inset-0 flex items-center justify-center bg-slate-950/60 z-10" role="status" aria-live="polite">
+                <div class="spinner" aria-hidden="true"></div>
+                <span class="sr-only">Processing images…</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Hidden clipboard fallback textarea -->
+  <textarea id="clipboard-helper" class="fixed -top-96 left-0 opacity-0 pointer-events-none"></textarea>
+
+  <!-- Application Logic -->
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
