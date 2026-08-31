@@ -14,6 +14,7 @@ const state = {
   bgColor: '#0f172a',
   selectedId: null,
   zCounter: 1,
+  boardOrderCounter: 1,
 };
 
 export function getMoodBoardState() {
@@ -54,7 +55,7 @@ export function addMoodBoardImage({ img, src, name }) {
   const item = {
     id: randomId('mb'), img, src, name,
     x: pos.x, y: pos.y, w: pos.w, h: pos.h,
-    rotation: 0, zIndex: state.zCounter++, selected: false,
+    rotation: 0, zIndex: state.zCounter++, order: state.boardOrderCounter++, selected: false,
   };
   state.images.push(item);
   return item;
@@ -62,8 +63,10 @@ export function addMoodBoardImage({ img, src, name }) {
 
 export function hydrateMoodBoardImage(data) {
   const item = { ...data, selected: false };
+  if (item.order === undefined) item.order = state.boardOrderCounter;
   state.images.push(item);
   state.zCounter = Math.max(state.zCounter, (data.zIndex || 0) + 1);
+  state.boardOrderCounter = Math.max(state.boardOrderCounter, item.order + 1);
   return item;
 }
 
@@ -79,10 +82,34 @@ export function removeMoodBoardImage(id) {
   if (state.selectedId === id) state.selectedId = null;
 }
 
-export function moveMoodBoardImage(index, direction) {
+// Images and swatch groups share one ordering (via each item's `order` field)
+// so the Board Items strip and grid layout can freely interleave both kinds.
+export function getBoardItems() {
+  return [
+    ...state.images.map(item => ({ ...item, kind: 'image' })),
+    ...state.swatchGroups.map(group => ({ ...group, kind: 'swatch-group' })),
+  ].sort((a, b) => a.order - b.order);
+}
+
+function findOrderedRef(id, kind) {
+  return kind === 'image'
+    ? state.images.find(i => i.id === id)
+    : state.swatchGroups.find(g => g.id === id);
+}
+
+export function moveBoardItem(id, direction) {
+  const combined = getBoardItems();
+  const index = combined.findIndex(item => item.id === id);
+  if (index === -1) return;
   const targetIndex = index + direction;
-  if (targetIndex < 0 || targetIndex >= state.images.length) return;
-  [state.images[index], state.images[targetIndex]] = [state.images[targetIndex], state.images[index]];
+  if (targetIndex < 0 || targetIndex >= combined.length) return;
+
+  const a = combined[index];
+  const b = combined[targetIndex];
+  const aRef = findOrderedRef(a.id, a.kind);
+  const bRef = findOrderedRef(b.id, b.kind);
+  if (!aRef || !bRef) return;
+  [aRef.order, bRef.order] = [bRef.order, aRef.order];
 }
 
 export function clearMoodBoard() {
@@ -120,7 +147,7 @@ export function removeStickyNote(id) {
 export function addSwatchGroup({ colors, sourceName, x, y, w, h }) {
   const group = {
     id: randomId('swatch'), colors, sourceName,
-    x, y, w, h, rotation: 0, zIndex: state.zCounter++, selected: false,
+    x, y, w, h, rotation: 0, zIndex: state.zCounter++, order: state.boardOrderCounter++, selected: false,
   };
   state.swatchGroups.push(group);
   return group;
@@ -128,8 +155,10 @@ export function addSwatchGroup({ colors, sourceName, x, y, w, h }) {
 
 export function hydrateSwatchGroup(data) {
   const group = { ...data, selected: false };
+  if (group.order === undefined) group.order = state.boardOrderCounter;
   state.swatchGroups.push(group);
   state.zCounter = Math.max(state.zCounter, (data.zIndex || 0) + 1);
+  state.boardOrderCounter = Math.max(state.boardOrderCounter, group.order + 1);
   return group;
 }
 

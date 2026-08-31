@@ -5,20 +5,21 @@ import {
   processPaletteImageFile, setPaletteSort, setPaletteCount,
   setShowHexText, setShowRgbText, applyPaletteTheme, applyPaletteHarmony,
   resetPaletteToSource, getPaletteSnapshot, applyPaletteSettings, syncPaletteControlsUI,
+  renderPaletteCompositeCanvas,
 } from './palette.js';
 import { createSampleImage, loadSampleMoodBoard } from './sample-data.js';
 import {
-  addImagesToMoodBoard, removeMoodBoardImageAction, moveMoodBoardImageAction,
+  addImagesToMoodBoard, removeMoodBoardImageAction, moveBoardItemAction,
   clearMoodBoardAction, selectMoodBoardImageAction, setMbModeAction,
   setMbColumnsAction, setMbGutterAction, setMbPaddingAction, setMbRadiusAction,
-  setMbRatioAction, setMbBgAction, addStickyNoteAction,
+  setMbRatioAction, setMbBgAction, addStickyNoteAction, removeSwatchGroupAction,
   renderMoodBoard, initMoodBoard, onMoodBoardChange,
 } from './moodboard.js';
 import {
   getMoodBoardState, applyMoodBoardSettings, hydrateMoodBoardImage,
   hydrateStickyNote, hydrateSwatchGroup, getSelectedImage,
 } from './moodboard-state.js';
-import { updateMoodBoardUI, updateMbColumnButtons, updateMbRatioButtons, updateMbModeButtons, updateExtractButtonState } from './moodboard-ui.js';
+import { updateMoodBoardUI, updateMbColumnButtons, updateMbRatioButtons, updateMbModeButtons, updateMbBgButtons, updateExtractButtonState } from './moodboard-ui.js';
 import { extractSelectedImagePalette } from './moodboard-extract.js';
 import { downloadCanvasById, downloadDynamicBoardAsPNG } from './download.js';
 import { loadState, scheduleSave, buildMoodBoardImagePayload } from './storage.js';
@@ -43,7 +44,7 @@ function persistState() {
       })),
       swatchGroups: mbState.swatchGroups.map(g => ({
         id: g.id, colors: g.colors, sourceName: g.sourceName,
-        x: g.x, y: g.y, w: g.w, h: g.h, rotation: g.rotation, zIndex: g.zIndex,
+        x: g.x, y: g.y, w: g.w, h: g.h, rotation: g.rotation, zIndex: g.zIndex, order: g.order,
       })),
     },
   }));
@@ -246,8 +247,9 @@ function wireMoodBoardControls() {
     const { action, id } = actionEl.dataset;
     if (action === 'select') selectMoodBoardImageAction(id);
     else if (action === 'remove') removeMoodBoardImageAction(id);
-    else if (action === 'move-left') moveMoodBoardImageAction(parseInt(actionEl.dataset.index, 10), -1);
-    else if (action === 'move-right') moveMoodBoardImageAction(parseInt(actionEl.dataset.index, 10), 1);
+    else if (action === 'remove-swatch-group') removeSwatchGroupAction(id);
+    else if (action === 'move-item-left') moveBoardItemAction(id, -1);
+    else if (action === 'move-item-right') moveBoardItemAction(id, 1);
   });
   $('#mb-thumbs-list')?.addEventListener('keydown', (e) => {
     const target = e.target.closest('[data-action="select"]');
@@ -300,10 +302,12 @@ async function boot() {
   }
 
   syncPaletteControlsUI();
+  renderPaletteCompositeCanvas();
   const mbState = getMoodBoardState();
   updateMbColumnButtons(mbState.columns);
   updateMbRatioButtons(mbState.ratio);
   updateMbModeButtons(mbState.mode);
+  updateMbBgButtons(mbState.bgColor);
   const gutterSlider = $('#mb-gutter');
   const paddingSlider = $('#mb-padding');
   const radiusSlider = $('#mb-radius');

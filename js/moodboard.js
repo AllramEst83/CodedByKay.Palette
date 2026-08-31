@@ -1,16 +1,17 @@
 import { showToast, reportError } from './dom-utils.js';
 import {
   getMoodBoardState, addMoodBoardImage, removeMoodBoardImage as removeImageState,
-  moveMoodBoardImage as moveImageState, clearMoodBoard as clearBoardState,
+  moveBoardItem as moveBoardItemState,
+  clearMoodBoard as clearBoardState,
   setMbMode, setMbColumns as setColumnsState, setMbGutter as setGutterState,
   setMbPadding as setPaddingState, setMbRadius as setRadiusState,
   setMbRatio as setRatioState, setMbBg as setBgState, addStickyNote,
   removeStickyNote as removeStickyNoteState, selectMoodBoardItem, getSelectedImage,
-  addSwatchGroup,
+  addSwatchGroup, removeSwatchGroup as removeSwatchGroupState,
 } from './moodboard-state.js';
 import {
   updateMoodBoardUI, updateMbColumnButtons, updateMbRatioButtons,
-  updateMbModeButtons, updateExtractButtonState,
+  updateMbModeButtons, updateMbBgButtons, updateExtractButtonState,
 } from './moodboard-ui.js';
 import { renderMoodBoardGridCanvas } from './moodboard-grid.js';
 import { renderDynamicCanvas, initDynamicCanvas, editSelectedNote } from './moodboard-dynamic.js';
@@ -93,8 +94,8 @@ export function removeMoodBoardImageAction(id) {
   showToast('Image removed');
 }
 
-export function moveMoodBoardImageAction(index, direction) {
-  moveImageState(index, direction);
+export function moveBoardItemAction(id, direction) {
+  moveBoardItemState(id, direction);
   updateMoodBoardUI();
   renderMoodBoard();
   notifyChange();
@@ -159,6 +160,7 @@ export function setMbRatioAction(ratio) {
 
 export function setMbBgAction(color) {
   setBgState(color);
+  updateMbBgButtons(color);
   renderMoodBoard();
   notifyChange();
 }
@@ -180,7 +182,17 @@ export function removeStickyNoteAction(id) {
 export function addSwatchGroupAction({ colors, sourceName, x, y, w, h }) {
   const group = addSwatchGroup({ colors, sourceName, x, y, w, h });
   selectMoodBoardItem(group.id);
+  updateMoodBoardUI();
+  updateExtractButtonState(!!getSelectedImage());
   renderMoodBoard();
   notifyChange();
   return group;
+}
+
+export function removeSwatchGroupAction(id) {
+  removeSwatchGroupState(id);
+  updateMoodBoardUI();
+  renderMoodBoard();
+  notifyChange();
+  showToast('Palette removed');
 }

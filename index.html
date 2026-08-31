@@ -4,6 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Palette&MoodBoard</title>
+  <!-- Favicon and Icons -->
+  <link rel="icon" type="image/x-icon" href="./assets/icons/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="./assets/icons/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="./assets/icons/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="./assets/icons/apple-touch-icon.png">
+  <meta name="theme-color" content="#0f172a">
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Lucide Icons -->
@@ -102,9 +108,9 @@
             <div class="flex flex-col gap-2">
               <label class="text-xs font-semibold text-slate-300">Palette Sorting</label>
               <div class="grid grid-cols-3 gap-1.5 p-1 bg-slate-950 rounded-xl border border-slate-800 text-xs">
-                <button type="button" id="sort-prominence" aria-pressed="true" class="py-1.5 rounded-lg font-medium transition-all text-white bg-indigo-600">Dominance</button>
-                <button type="button" id="sort-luminance" aria-pressed="false" class="py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">Luminance</button>
-                <button type="button" id="sort-hue" aria-pressed="false" class="py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">Hue</button>
+                <button type="button" id="sort-prominence" aria-pressed="true" title="Order swatches by how much of the image they cover, most prominent first" class="py-1.5 rounded-lg font-medium transition-all text-white bg-indigo-600">Dominance</button>
+                <button type="button" id="sort-luminance" aria-pressed="false" title="Order swatches from darkest to lightest" class="py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">Luminance</button>
+                <button type="button" id="sort-hue" aria-pressed="false" title="Order swatches around the color wheel" class="py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">Hue</button>
               </div>
             </div>
 
@@ -112,12 +118,12 @@
             <div class="flex flex-col gap-2">
               <label class="text-xs font-semibold text-slate-300">Theme Transform</label>
               <div id="theme-button-group" class="grid grid-cols-3 gap-1.5 p-1 bg-slate-950 rounded-xl border border-slate-800 text-xs">
-                <button type="button" id="theme-original" data-theme="original" aria-pressed="true" class="py-1.5 rounded-lg font-medium transition-all text-white bg-indigo-600">Original</button>
-                <button type="button" id="theme-pastel" data-theme="pastel" aria-pressed="false" class="py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">Pastel</button>
-                <button type="button" id="theme-neon" data-theme="neon" aria-pressed="false" class="py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">Neon</button>
-                <button type="button" id="theme-muted" data-theme="muted" aria-pressed="false" class="py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">Muted</button>
-                <button type="button" id="theme-vivid" data-theme="vivid" aria-pressed="false" class="py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">Vivid</button>
-                <button type="button" id="theme-dark" data-theme="dark" aria-pressed="false" class="py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">Dark</button>
+                <button type="button" id="theme-original" data-theme="original" aria-pressed="true" title="Show the raw extracted colors, no transform applied" class="py-1.5 rounded-lg font-medium transition-all text-white bg-indigo-600">Original</button>
+                <button type="button" id="theme-pastel" data-theme="pastel" aria-pressed="false" title="Soft, light, desaturated tones" class="py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">Pastel</button>
+                <button type="button" id="theme-neon" data-theme="neon" aria-pressed="false" title="Bold, highly saturated, glowing tones" class="py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">Neon</button>
+                <button type="button" id="theme-muted" data-theme="muted" aria-pressed="false" title="Heavily desaturated, subdued tones" class="py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">Muted</button>
+                <button type="button" id="theme-vivid" data-theme="vivid" aria-pressed="false" title="Punchy, boosted-saturation colors" class="py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">Vivid</button>
+                <button type="button" id="theme-dark" data-theme="dark" aria-pressed="false" title="Deepened, shadowy, low-lightness tones" class="py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">Dark</button>
               </div>
             </div>
 
@@ -132,10 +138,10 @@
                 </div>
               </div>
               <div id="harmony-button-group" class="grid grid-cols-4 gap-1.5 p-1 bg-slate-950 rounded-xl border border-slate-800 text-xs">
-                <button type="button" id="harmony-complementary" data-harmony="complementary" aria-pressed="false" class="py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">Compl.</button>
-                <button type="button" id="harmony-analogous" data-harmony="analogous" aria-pressed="false" class="py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">Analog.</button>
-                <button type="button" id="harmony-triadic" data-harmony="triadic" aria-pressed="false" class="py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">Triadic</button>
-                <button type="button" id="harmony-tetradic" data-harmony="tetradic" aria-pressed="false" class="py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">Tetradic</button>
+                <button type="button" id="harmony-complementary" data-harmony="complementary" aria-pressed="false" title="Base color plus its opposite on the color wheel — high contrast" class="py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">Compl.</button>
+                <button type="button" id="harmony-analogous" data-harmony="analogous" aria-pressed="false" title="Base color plus its neighbors on the color wheel — calm and cohesive" class="py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">Analog.</button>
+                <button type="button" id="harmony-triadic" data-harmony="triadic" aria-pressed="false" title="Three hues evenly spaced around the color wheel — balanced and vibrant" class="py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">Triadic</button>
+                <button type="button" id="harmony-tetradic" data-harmony="tetradic" aria-pressed="false" title="Four hues evenly spaced around the color wheel — rich and varied" class="py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">Tetradic</button>
               </div>
               <p class="text-[10px] text-slate-500">Shift-click a swatch to set it as the harmony base color.</p>
             </div>
@@ -329,11 +335,11 @@
             <div class="flex flex-col gap-2">
               <label class="text-xs font-semibold text-slate-300">Background Canvas Color</label>
               <div class="flex items-center gap-2">
-                <button type="button" data-bg="#0f172a" class="w-7 h-7 rounded-lg bg-slate-900 border-2 border-indigo-500 shadow-sm transition-transform hover:scale-105" title="Dark Slate" aria-label="Dark Slate background"></button>
-                <button type="button" data-bg="#000000" class="w-7 h-7 rounded-lg bg-black border border-slate-700 shadow-sm transition-transform hover:scale-105" title="Pure Black" aria-label="Pure Black background"></button>
-                <button type="button" data-bg="#ffffff" class="w-7 h-7 rounded-lg bg-white border border-slate-700 shadow-sm transition-transform hover:scale-105" title="Clean White" aria-label="Clean White background"></button>
-                <button type="button" data-bg="#f5f5f4" class="w-7 h-7 rounded-lg bg-stone-100 border border-slate-700 shadow-sm transition-transform hover:scale-105" title="Warm Stone" aria-label="Warm Stone background"></button>
-                <button type="button" data-bg="#1e1b4b" class="w-7 h-7 rounded-lg bg-indigo-950 border border-slate-700 shadow-sm transition-transform hover:scale-105" title="Midnight Indigo" aria-label="Midnight Indigo background"></button>
+                <button type="button" data-bg="#0f172a" style="background-color:#0f172a" class="w-7 h-7 rounded-lg border-2 border-indigo-500 shadow-sm transition-transform hover:scale-105" title="Dark Slate" aria-label="Dark Slate background" aria-pressed="true"></button>
+                <button type="button" data-bg="#000000" style="background-color:#000000" class="w-7 h-7 rounded-lg border border-slate-700 shadow-sm transition-transform hover:scale-105" title="Pure Black" aria-label="Pure Black background" aria-pressed="false"></button>
+                <button type="button" data-bg="#ffffff" style="background-color:#ffffff" class="w-7 h-7 rounded-lg border border-slate-700 shadow-sm transition-transform hover:scale-105" title="Clean White" aria-label="Clean White background" aria-pressed="false"></button>
+                <button type="button" data-bg="#f5f5f4" style="background-color:#f5f5f4" class="w-7 h-7 rounded-lg border border-slate-700 shadow-sm transition-transform hover:scale-105" title="Warm Stone" aria-label="Warm Stone background" aria-pressed="false"></button>
+                <button type="button" data-bg="#1e1b4b" style="background-color:#1e1b4b" class="w-7 h-7 rounded-lg border border-slate-700 shadow-sm transition-transform hover:scale-105" title="Midnight Indigo" aria-label="Midnight Indigo background" aria-pressed="false"></button>
                 <div class="relative flex-1 flex items-center">
                   <input type="color" id="mb-custom-bg" value="#0f172a" class="w-full h-8 rounded-lg bg-transparent border border-slate-700 cursor-pointer p-0.5" aria-label="Custom background color" />
                 </div>
@@ -355,7 +361,7 @@
           <div class="bg-slate-900/80 border border-slate-800/80 rounded-2xl p-4 sm:p-5 flex flex-col gap-3">
             <div class="flex items-center justify-between">
               <span class="text-xs font-bold uppercase tracking-wider text-slate-400">
-                Board Items (<span id="mb-items-count">0</span> images)
+                Board Items (<span id="mb-items-count">0</span> items)
               </span>
               <div class="flex items-center gap-3">
                 <button type="button" id="btn-extract-selected" disabled class="text-xs font-medium text-indigo-400 hover:text-indigo-300 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors">

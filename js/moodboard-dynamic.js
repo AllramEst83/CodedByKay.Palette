@@ -38,6 +38,20 @@ function notifyStateChange() {
   document.dispatchEvent(new CustomEvent('moodboard:state-change'));
 }
 
+function clampPosition(x, y, w, h) {
+  return {
+    x: Math.min(Math.max(0, x), Math.max(0, DYNAMIC_CANVAS_W - w)),
+    y: Math.min(Math.max(0, y), Math.max(0, DYNAMIC_CANVAS_H - h)),
+  };
+}
+
+function clampSize(x, y, w, h) {
+  return {
+    w: Math.min(w, Math.max(MIN_RESIZE_SIZE, DYNAMIC_CANVAS_W - x)),
+    h: Math.min(h, Math.max(MIN_RESIZE_SIZE, DYNAMIC_CANVAS_H - y)),
+  };
+}
+
 function isEditingText(container) {
   const active = document.activeElement;
   return !!active && active.classList?.contains('note-text') && container.contains(active);
@@ -259,8 +273,10 @@ function onPointerMove(e) {
     const { scaleX, scaleY } = domScale(container);
     const deltaX = (e.clientX - resizeState.startClientX) / scaleX;
     const deltaY = (e.clientY - resizeState.startClientY) / scaleY;
-    const nextW = Math.max(MIN_RESIZE_SIZE, resizeState.startW + deltaX);
-    const nextH = Math.max(MIN_RESIZE_SIZE, resizeState.startH + deltaY);
+    const rawW = Math.max(MIN_RESIZE_SIZE, resizeState.startW + deltaX);
+    const rawH = Math.max(MIN_RESIZE_SIZE, resizeState.startH + deltaY);
+    const item = findMoodBoardItem(resizeState.id);
+    const { w: nextW, h: nextH } = clampSize(item ? item.x : 0, item ? item.y : 0, rawW, rawH);
 
     updateItemPosition(resizeState.id, { w: nextW, h: nextH });
 
@@ -275,8 +291,10 @@ function onPointerMove(e) {
   if (!dragState) return;
 
   const logicalPoint = clientToLogical(container, e.clientX, e.clientY);
-  const nextX = logicalPoint.x - dragState.offsetX;
-  const nextY = logicalPoint.y - dragState.offsetY;
+  const rawX = logicalPoint.x - dragState.offsetX;
+  const rawY = logicalPoint.y - dragState.offsetY;
+  const draggedItem = findMoodBoardItem(dragState.id);
+  const { x: nextX, y: nextY } = clampPosition(rawX, rawY, draggedItem ? draggedItem.w : 0, draggedItem ? draggedItem.h : 0);
 
   updateItemPosition(dragState.id, { x: nextX, y: nextY });
 
@@ -310,13 +328,20 @@ function onKeyDown(e) {
   if (!item) return;
 
   let handled = true;
+  let nextX = item.x;
+  let nextY = item.y;
   switch (e.key) {
-    case 'ArrowLeft': updateItemPosition(item.id, { x: item.x - step }); break;
-    case 'ArrowRight': updateItemPosition(item.id, { x: item.x + step }); break;
-    case 'ArrowUp': updateItemPosition(item.id, { y: item.y - step }); break;
-    case 'ArrowDown': updateItemPosition(item.id, { y: item.y + step }); break;
-    case 'Escape': clearMoodBoardSelection(); break;
+    case 'ArrowLeft': nextX = item.x - step; break;
+    case 'ArrowRight': nextX = item.x + step; break;
+    case 'ArrowUp': nextY = item.y - step; break;
+    case 'ArrowDown': nextY = item.y + step; break;
+    case 'Escape': clearMoodBoardSelection(); handled = 'escape'; break;
     default: handled = false;
+  }
+
+  if (handled === true) {
+    const clamped = clampPosition(nextX, nextY, item.w, item.h);
+    updateItemPosition(item.id, clamped);
   }
 
   if (handled) {

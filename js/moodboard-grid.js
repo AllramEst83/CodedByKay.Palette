@@ -1,5 +1,40 @@
 import { $, reportError } from './dom-utils.js';
-import { getMoodBoardState } from './moodboard-state.js';
+import { getMoodBoardState, getBoardItems } from './moodboard-state.js';
+
+function drawImageCell(ctx, item, x, y, cellWidth, cellHeight) {
+  const img = item.img;
+  const imgAspect = (img.naturalWidth || img.width) / (img.naturalHeight || img.height);
+  const cellAspect = cellWidth / cellHeight;
+
+  let sx = 0, sy = 0, sWidth = img.naturalWidth || img.width, sHeight = img.naturalHeight || img.height;
+  if (imgAspect > cellAspect) {
+    sWidth = (img.naturalHeight || img.height) * cellAspect;
+    sx = ((img.naturalWidth || img.width) - sWidth) / 2;
+  } else {
+    sHeight = (img.naturalWidth || img.width) / cellAspect;
+    sy = ((img.naturalHeight || img.height) - sHeight) / 2;
+  }
+
+  ctx.drawImage(img, sx, sy, sWidth, sHeight, x, y, cellWidth, cellHeight);
+}
+
+function drawSwatchGroupCell(ctx, item, x, y, cellWidth, cellHeight) {
+  const rowCount = item.colors.length;
+  const rowHeight = cellHeight / rowCount;
+
+  item.colors.forEach((color, i) => {
+    const rowY = y + i * rowHeight;
+    ctx.fillStyle = color.hex;
+    ctx.fillRect(x, rowY, cellWidth, rowHeight);
+
+    const isLight = color.luminance > 140;
+    ctx.fillStyle = isLight ? '#0f172a' : '#ffffff';
+    ctx.font = `700 ${Math.max(10, Math.min(20, Math.round(rowHeight * 0.4)))}px 'JetBrains Mono', monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(color.hex, x + cellWidth / 2, rowY + rowHeight / 2);
+  });
+}
 
 export function renderMoodBoardGridCanvas() {
   const state = getMoodBoardState();
@@ -8,21 +43,23 @@ export function renderMoodBoardGridCanvas() {
   const dimensionsLabel = $('#mb-canvas-dimensions');
   if (!canvas || !emptyState || !dimensionsLabel) return;
 
-  if (!state.images.length && !state.stickyNotes.length) {
+  const cells = getBoardItems();
+
+  if (!cells.length) {
+    canvas.classList.add('hidden');
     emptyState.classList.remove('hidden');
-    canvas.width = 1;
-    canvas.height = 1;
     dimensionsLabel.textContent = 'Empty';
     return;
   }
 
+  canvas.classList.remove('hidden');
   emptyState.classList.add('hidden');
 
   try {
     const ctx = canvas.getContext('2d');
-    const totalImages = Math.max(state.images.length, 1);
-    const cols = Math.min(state.columns, totalImages);
-    const rows = Math.ceil(totalImages / cols);
+    const totalCells = cells.length;
+    const cols = Math.min(state.columns, totalCells);
+    const rows = Math.ceil(totalCells / cols);
 
     const baseCanvasWidth = 1920;
     const availableWidth = baseCanvasWidth - state.padding * 2 - (cols - 1) * state.gutter;
@@ -41,24 +78,11 @@ export function renderMoodBoardGridCanvas() {
     ctx.fillStyle = state.bgColor;
     ctx.fillRect(0, 0, baseCanvasWidth, baseCanvasHeight);
 
-    state.images.forEach((item, index) => {
+    cells.forEach((item, index) => {
       const col = index % cols;
       const row = Math.floor(index / cols);
       const x = state.padding + col * (cellWidth + state.gutter);
       const y = state.padding + row * (cellHeight + state.gutter);
-      const img = item.img;
-
-      const imgAspect = (img.naturalWidth || img.width) / (img.naturalHeight || img.height);
-      const cellAspect = cellWidth / cellHeight;
-
-      let sx = 0, sy = 0, sWidth = img.naturalWidth || img.width, sHeight = img.naturalHeight || img.height;
-      if (imgAspect > cellAspect) {
-        sWidth = (img.naturalHeight || img.height) * cellAspect;
-        sx = ((img.naturalWidth || img.width) - sWidth) / 2;
-      } else {
-        sHeight = (img.naturalWidth || img.width) / cellAspect;
-        sy = ((img.naturalHeight || img.height) - sHeight) / 2;
-      }
 
       ctx.save();
       ctx.beginPath();
@@ -74,7 +98,12 @@ export function renderMoodBoardGridCanvas() {
       }
       ctx.closePath();
       ctx.clip();
-      ctx.drawImage(img, sx, sy, sWidth, sHeight, x, y, cellWidth, cellHeight);
+
+      if (item.kind === 'image') {
+        drawImageCell(ctx, item, x, y, cellWidth, cellHeight);
+      } else {
+        drawSwatchGroupCell(ctx, item, x, y, cellWidth, cellHeight);
+      }
       ctx.restore();
 
       if (state.radius > 0) {

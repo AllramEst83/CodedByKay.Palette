@@ -39,7 +39,7 @@ export function buildMoodBoardImagePayload(images) {
   return images.map(item => ({
     id: item.id, name: item.name,
     x: item.x, y: item.y, w: item.w, h: item.h,
-    rotation: item.rotation, zIndex: item.zIndex,
+    rotation: item.rotation, zIndex: item.zIndex, order: item.order,
     src: downscaleForStorage(item.img, PERSIST_IMAGE_MAX_DIM),
   }));
 }

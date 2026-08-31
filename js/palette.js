@@ -384,10 +384,17 @@ function renderSidebarComposite(ctx, canvas, image, imgW, imgH, colors, showHex,
 }
 
 export function renderPaletteCompositeCanvas() {
-  if (!state.paletteImage) return;
   const canvas = $('#palette-composite-canvas');
   const emptyState = $('#palette-empty-state');
   if (!canvas || !emptyState) return;
+
+  if (!state.paletteImage) {
+    canvas.classList.add('hidden');
+    emptyState.classList.remove('hidden');
+    return;
+  }
+
+  canvas.classList.remove('hidden');
   emptyState.classList.add('hidden');
 
   try {
