@@ -50,11 +50,25 @@ function cascadePosition(index) {
   };
 }
 
+// Fits a new image into a default bounding box while keeping its own aspect ratio,
+// used for the Dynamic board where each item's w/h is rendered as-is (no cropping).
+const DYNAMIC_IMAGE_MAX = 260;
+
+function dynamicImageSize(img) {
+  const naturalW = img.naturalWidth || img.width || 1;
+  const naturalH = img.naturalHeight || img.height || 1;
+  const aspect = naturalW / naturalH;
+  return aspect >= 1
+    ? { w: DYNAMIC_IMAGE_MAX, h: DYNAMIC_IMAGE_MAX / aspect }
+    : { w: DYNAMIC_IMAGE_MAX * aspect, h: DYNAMIC_IMAGE_MAX };
+}
+
 export function addMoodBoardImage({ img, src, name }) {
   const pos = cascadePosition(state.images.length + state.stickyNotes.length + state.swatchGroups.length);
+  const size = state.mode === 'dynamic' ? dynamicImageSize(img) : { w: pos.w, h: pos.h };
   const item = {
     id: randomId('mb'), img, src, name,
-    x: pos.x, y: pos.y, w: pos.w, h: pos.h,
+    x: pos.x, y: pos.y, w: size.w, h: size.h,
     rotation: 0, zIndex: state.zCounter++, order: state.boardOrderCounter++, selected: false,
   };
   state.images.push(item);
