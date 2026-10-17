@@ -27,6 +27,9 @@ class BoardController extends ChangeNotifier {
   String bgColor = '#0f172a';
 
   String? selectedId;
+
+  /// Id of the sticky note whose text is currently being edited.
+  String? editingNoteId;
   bool loading = false;
 
   /// Palette extracted from the selected image (shown in the controls panel).
@@ -198,6 +201,7 @@ class BoardController extends ChangeNotifier {
     swatchGroups.clear();
     extractedColors = <Swatch>[];
     selectedId = null;
+    editingNoteId = null;
   }
 
   void clear() {
@@ -247,8 +251,21 @@ class BoardController extends ChangeNotifier {
     );
     notes.add(note);
     selectedId = note.id;
+    editingNoteId = note.id;
     notifyListeners();
     return note;
+  }
+
+  void beginEditingNote(String id) {
+    selectedId = id;
+    editingNoteId = id;
+    notifyListeners();
+  }
+
+  void endEditingNote() {
+    if (editingNoteId == null) return;
+    editingNoteId = null;
+    notifyListeners();
   }
 
   void updateNote(String id, {String? text, String? color}) {
@@ -264,6 +281,7 @@ class BoardController extends ChangeNotifier {
   void removeNote(String id) {
     notes.removeWhere((StickyNote n) => n.id == id);
     if (selectedId == id) selectedId = null;
+    if (editingNoteId == id) editingNoteId = null;
     notifyListeners();
   }
 
