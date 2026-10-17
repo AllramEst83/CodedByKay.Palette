@@ -4,7 +4,7 @@ Goal: build a Flutter version of the Palette app (palette extractor + mood board
 
 ## Decisions
 
-- The vanilla web app (`index.html`, `js/`, `css/`) stays as is. `AGENTS.md` and `.agents/rules` mandate vanilla web for it, so Flutter does not replace it.
+- The vanilla web app (`index.html`, `js/`, `css/`) stays in the repo as the behavior reference and is no longer extended. `.agents/rules` now holds the Flutter development rules.
 - The Flutter project lives in `flutter_app/` at the repo root. Targets: `android` and `web`.
 - Behavior is ported from the existing JS, not redesigned. Persisted JSON keeps the same field names (`version: 1`).
 - Platforms: Android and web only. Devices: Android phones and Android tablets. Tablets are a first-class target, not an afterthought. Layouts are chosen by available width, not by device type, so split-screen, foldables, and rotation work too.
