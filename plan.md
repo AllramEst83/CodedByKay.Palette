@@ -1,12 +1,13 @@
 # Flutter Port Plan (Android + Web)
 
-Goal: build a Flutter version of the Palette app (palette extractor + mood board) that ships as an Android app and a web app from one codebase.
+Goal: build a Flutter version of the Palette app (palette extractor + mood board) that ships as an Android app and a web app from one codebase. Targets are Android and web only. Supported devices are Android phones and Android tablets; the web build runs in the browser.
 
 ## Decisions
 
 - The vanilla web app (`index.html`, `js/`, `css/`) stays as is. `AGENTS.md` and `.agents/rules` mandate vanilla web for it, so Flutter does not replace it.
 - The Flutter project lives in `flutter_app/` at the repo root. Targets: `android` and `web`.
 - Behavior is ported from the existing JS, not redesigned. Persisted JSON keeps the same field names (`version: 1`).
+- Platforms: Android and web only. Devices: Android phones and Android tablets. Tablets are a first-class target, not an afterthought. Layouts are chosen by available width, not by device type, so split-screen, foldables, and rotation work too.
 - Fallback if Flutter proves too costly: wrap the existing web app with Capacitor or a PWA/TWA for Android only.
 
 ## Source-to-target map
@@ -77,18 +78,21 @@ Goal: build a Flutter version of the Palette app (palette extractor + mood board
 
 ## Phase 6: Responsive UI for web and Android
 
-- One codebase, two layouts:
-  - Wide (web): top tabs, a left control panel (~380 px), a large preview on the right.
-  - Narrow (Android): bottom navigation, the preview on top, controls in a modal bottom sheet.
-- Shared control widgets for both layouts.
+- One codebase, three layouts, chosen with `LayoutBuilder` on available width (not platform):
+  - Wide (>= ~1024 dp, large tablets in landscape and wide browser windows): top tabs, a left control panel (~380 px), a large preview on the right.
+  - Medium (~600-1023 dp, tablets, including portrait): navigation rail, the preview taking most of the space, controls in a collapsible side panel (~320 px) or a persistent bottom panel in portrait, so the sheet does not cover the preview.
+  - Narrow (< 600 dp, phones): bottom navigation, the preview on top, controls in a modal bottom sheet.
+- Shared control widgets for all layouts.
+- Tablet specifics: handle rotation and window resize without losing state (board, selection, scroll); touch-first targets plus stylus and keyboard/mouse input; mood board dynamic canvas scales to use the larger screen; no layout assumes a fixed orientation (remove any Android orientation lock).
 - Loading indicators and shimmer placeholders for async work, per the repo UX rules.
 - Accessibility: semantic labels, minimum 48 dp touch targets, WCAG contrast (4.5:1 text, 3:1 large text), never color alone to convey state.
 - Web extras: drag-and-drop files, paste image from clipboard where feasible.
-- Exit criteria: usable at phone, tablet, and desktop widths.
+- Test on Android phone (~360x800) and tablet (7-8" and 10-12", both orientations) emulators/devices, plus split-screen. The web build is checked in a browser at the same widths and a wide window; no other devices are targeted.
+- Exit criteria: usable on Android phones and tablets and in the web build, with no overflow or state loss on rotation or resize.
 
 ## Phase 7: Packaging and release
 
-- Android: app icon (reuse `assets/icons/color-palette.png`), adaptive icon, release signing, `flutter build appbundle`.
+- Android: app icon (reuse `assets/icons/color-palette.png`), adaptive icon, release signing, `flutter build appbundle`. Declare tablet support in the manifest (no `required` restriction on screen size, resizable activity, all orientations) and prepare tablet screenshots for the store listing.
 - Web: `flutter build web`, PWA manifest and icons, hosting decision (static host).
 - README for `flutter_app/`: setup, run, build.
 - Exit criteria: signed AAB and deployable web build produced from CI.
@@ -103,6 +107,6 @@ Goal: build a Flutter version of the Palette app (palette extractor + mood board
 
 ## Out of scope for the first release
 
-- iOS, desktop targets.
+- iOS/iPadOS, Windows/macOS/Linux desktop apps, and any other devices. Only Android phones and tablets, plus the web build, are supported.
 - Sharing to other apps (`share_plus`), cloud sync, accounts.
 - Persisting the Palette tab's source image (the current app does not either).
