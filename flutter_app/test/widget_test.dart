@@ -50,7 +50,7 @@ void main() {
     await tester.pump();
     tester.view.physicalSize = const Size(1200, 800);
     await tester.pump();
-    expect(find.text('Mood board'), findsWidgets);
+    expect(find.text('Build a mood board'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }
