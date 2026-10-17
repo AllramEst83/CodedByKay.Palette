@@ -1,0 +1,5 @@
+# Copy to key.properties (git-ignored) and fill in your upload keystore details.
+storePassword=<keystore password>
+keyPassword=<key password>
+keyAlias=upload
+storeFile=<absolute path to upload-keystore.jks>

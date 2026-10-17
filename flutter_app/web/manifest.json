@@ -1,12 +1,12 @@
 {
-    "name": "palette_app",
-    "short_name": "palette_app",
+    "name": "Palette & MoodBoard",
+    "short_name": "Palette",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "background_color": "#0F172A",
+    "theme_color": "#4F46E5",
+    "description": "Extract color palettes from images and arrange them on a mood board.",
+    "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
         {
