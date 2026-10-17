@@ -17,6 +17,7 @@ import '../painters/board_painters.dart';
 import '../responsive.dart';
 import '../widgets/color_picker.dart';
 import '../widgets/common.dart';
+import '../widgets/image_drop_zone.dart';
 import 'dynamic_board_view.dart';
 
 class MoodBoardPage extends StatelessWidget {
@@ -408,6 +409,13 @@ class MoodBoardPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final BoardController b = context.watch<BoardController>();
+    return ImageDropZone(
+      onImages: b.addPickedImages,
+      child: _boardColumn(b),
+    );
+  }
+
+  Widget _boardColumn(BoardController b) {
     return Column(
       children: <Widget>[
         if (b.loading) const LinearProgressIndicator(),

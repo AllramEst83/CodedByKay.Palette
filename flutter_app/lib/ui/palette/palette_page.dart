@@ -16,6 +16,7 @@ import '../app_theme.dart';
 import '../painters/palette_composite.dart';
 import '../responsive.dart';
 import '../widgets/common.dart';
+import '../widgets/image_drop_zone.dart';
 
 class PalettePage extends StatelessWidget {
   const PalettePage({super.key});
@@ -224,6 +225,21 @@ class _BaseColorIndicator extends StatelessWidget {
 
 class PalettePreview extends StatelessWidget {
   const PalettePreview({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final PaletteController c = context.read<PaletteController>();
+    return ImageDropZone(
+      single: true,
+      onImages: (List<PickedImage> images) =>
+          c.loadBytes(images.first.bytes, name: images.first.name),
+      child: const _PalettePreviewBody(),
+    );
+  }
+}
+
+class _PalettePreviewBody extends StatelessWidget {
+  const _PalettePreviewBody();
 
   @override
   Widget build(BuildContext context) {
