@@ -1,0 +1,48 @@
+---
+description: Flutter Development — Dart, Material 3, layered architecture, responsive layouts, and UX/a11y standards
+globs: flutter_app/**/*.dart
+alwaysApply: false
+---
+
+# Flutter Development
+
+## Stack
+
+- Use **Flutter** (stable channel) and **Dart 3+** with sound null safety
+- Targets are **Android (phones and tablets)** and **web** only; the app lives in `flutter_app/`
+- Use **Material 3** widgets and theming (`ThemeData`, `ColorScheme`); no hard-coded colors or text styles in widgets outside the theme
+- The legacy vanilla web app (`index.html`, `js/`, `css/`) is the reference for behavior; do not extend it
+
+## Architecture
+
+- Layered structure under `lib/`: `core/` (pure Dart logic), `models/`, `state/` (controllers), `services/` (I/O), `ui/` (widgets and screens)
+- Keep `core/` free of Flutter imports so it is unit-testable
+- State management with **provider** and `ChangeNotifier` controllers; widgets stay thin
+- Persisted JSON keeps the legacy field names (`version: 1`, schema key `palette-app-state-v1`)
+- Platform differences go behind conditional imports or an interface, never `kIsWeb` checks scattered in widgets
+
+## Dependencies
+
+- Prefer the Flutter/Dart SDK and first-party packages for simple tasks
+- Before adding a package, check [pub.dev](https://pub.dev/) for the most popular, well-maintained option, and confirm it supports both Android and web
+- Bundle fonts and assets; do not load them from a CDN at runtime
+
+## Responsive Layout
+
+- Choose layouts from available width with `LayoutBuilder`/`MediaQuery`, never from device type or platform
+- Breakpoints: narrow < 600 dp (phone), medium 600–1023 dp (tablet), wide >= 1024 dp
+- Never lock orientation; state must survive rotation, resize, and split-screen
+
+## User Experience
+
+- When the user must wait for async work, show a **loading indicator** (progress, skeleton, or shimmer); never block the UI thread: heavy work (k-means, image decode) runs in an isolate via `compute`
+- Use **shimmer placeholders** for images that load slowly
+- Provide feedback (SnackBar/toast) for copy, export, and errors
+
+## Accessibility & Code Quality
+
+- **Semantics:** add `Semantics`/`tooltip`/labels for non-text controls; support keyboard focus and screen readers
+- **Touch targets:** at least 48x48 dp
+- **WCAG color:** meet contrast ratios (4.5:1 normal text, 3:1 large text); never rely on color alone to convey state
+- **Clean code:** early returns, descriptive names, single-responsibility functions, `const` constructors where possible
+- Run `flutter analyze` and `flutter test` before committing; both must pass
