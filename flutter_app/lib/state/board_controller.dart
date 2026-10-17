@@ -109,7 +109,7 @@ class BoardController extends ChangeNotifier {
 
   // ---- images ------------------------------------------------------------
 
-  BoardImage addDecodedImage(ui.Image image, String name, {Uint8List? storedBytes}) {
+  BoardImage addDecodedImage(ui.Image image, String name, {String? storedSrc}) {
     final BoardRect pos = cascadePosition(images.length + notes.length + swatchGroups.length);
     double w = pos.w;
     double h = pos.h;
@@ -129,7 +129,7 @@ class BoardController extends ChangeNotifier {
       h: h,
       zIndex: _zCounter++,
       order: _orderCounter++,
-      storedBytes: storedBytes,
+      storedSrc: storedSrc,
     );
     images.add(item);
     return item;

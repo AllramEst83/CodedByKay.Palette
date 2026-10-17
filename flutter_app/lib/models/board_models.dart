@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'swatch.dart';
@@ -61,14 +60,15 @@ class BoardImage extends OrderedBoardItem {
     super.rotation,
     super.zIndex,
     required super.order,
-    this.storedBytes,
+    this.storedSrc,
   });
 
   final String name;
   final ui.Image image;
 
-  /// Downscaled encoded copy used for persistence; computed lazily and cached.
-  Uint8List? storedBytes;
+  /// Reference to the persisted downscaled copy (data URL on web, file name on
+  /// Android); computed lazily on first save and cached.
+  String? storedSrc;
 
   @override
   BoardItemKind get kind => BoardItemKind.image;

@@ -2,6 +2,29 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart' show compute;
+import 'package:image/image.dart' as img;
+
+class _JpegRequest {
+  const _JpegRequest(this.rgba, this.width, this.height, this.quality);
+
+  final Uint8List rgba;
+  final int width;
+  final int height;
+  final int quality;
+}
+
+Uint8List _encodeJpegIsolate(_JpegRequest req) {
+  final img.Image image = img.Image.fromBytes(
+    width: req.width,
+    height: req.height,
+    bytes: req.rgba.buffer,
+    bytesOffset: req.rgba.offsetInBytes,
+    numChannels: 4,
+  );
+  return Uint8List.fromList(img.encodeJpg(image, quality: req.quality));
+}
+
 /// Image decode, sampling and encode helpers built on `dart:ui`.
 class ImageService {
   const ImageService._();
@@ -76,6 +99,31 @@ class ImageService {
     if (longest <= maxDim) return (w: w, h: h);
     final double scale = maxDim / longest;
     return (w: math.max(1, (w * scale).round()), h: math.max(1, (h * scale).round()));
+  }
+
+  /// Longest side of persisted copies and their JPEG quality (0-100).
+  static const int storageDim = 800;
+  static const int storageQuality = 82;
+
+  /// Downscales [image] to at most [maxDim] and re-encodes it as JPEG for
+  /// persistence. Transparency is flattened by the JPEG encoder.
+  static Future<Uint8List> encodeForStorage(
+    ui.Image image, {
+    int maxDim = storageDim,
+    int quality = storageQuality,
+  }) async {
+    final ({int w, int h}) size = fitWithin(image.width, image.height, maxDim);
+    final ui.Image scaled = (size.w == image.width && size.h == image.height)
+        ? image
+        : await resize(image, size.w, size.h);
+    try {
+      final ByteData? data = await scaled.toByteData(format: ui.ImageByteFormat.rawRgba);
+      if (data == null) throw StateError('Could not read image pixels');
+      final Uint8List rgba = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+      return await compute(_encodeJpegIsolate, _JpegRequest(rgba, size.w, size.h, quality));
+    } finally {
+      if (!identical(scaled, image)) scaled.dispose();
+    }
   }
 
   static Future<Uint8List> encodePng(ui.Image image) async {
