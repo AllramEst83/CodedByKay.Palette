@@ -51,10 +51,15 @@ void main() {
     expect(b.images.first.w, 260);
     expect(b.images.first.h, 200);
     b.setMode(BoardMode.dynamic);
+    // Images added in grid mode are refit to their natural ratio on switching.
+    for (final BoardImage img in b.images) {
+      expect(img.w / img.h, closeTo(img.aspect, 0.01), reason: img.name);
+      expect(img.x + img.w, lessThanOrEqualTo(1600));
+      expect(img.y + img.h, lessThanOrEqualTo(1000));
+    }
     final image = b.images.first.image;
-    final BoardImage added = b.addDecodedImage(image, 'square');
-    expect(added.w, 260);
-    expect(added.h, 260); // 1:1 source
+    final BoardImage added = b.addDecodedImage(image, 'copy');
+    expect(added.w / added.h, closeTo(image.width / image.height, 0.01));
   });
 
   testWidgets('extract in dynamic mode adds a collision-free swatch group', (WidgetTester tester) async {

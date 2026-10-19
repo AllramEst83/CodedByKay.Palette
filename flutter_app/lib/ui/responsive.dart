@@ -1,10 +1,19 @@
 import 'package:flutter/material.dart';
 
+import 'widgets/panel_card.dart';
+
 /// Width-based layout classes (never platform/device-based).
 enum FormFactor { narrow, medium, wide }
 
 const double mediumBreakpoint = 600;
 const double wideBreakpoint = 1024;
+
+/// Widest the wide layout grows; extra window width becomes side margin.
+const double wideContentMaxWidth = 1560;
+
+/// Whether the wide (desktop/web) layout applies at the current width.
+bool isWideLayout(BuildContext context) =>
+    formFactorForWidth(MediaQuery.sizeOf(context).width) == FormFactor.wide;
 
 FormFactor formFactorForWidth(double width) {
   if (width >= wideBreakpoint) return FormFactor.wide;
@@ -14,7 +23,8 @@ FormFactor formFactorForWidth(double width) {
 
 /// Lays out a preview and its controls according to the available space:
 ///
-/// * wide, or medium landscape: controls in a left side panel
+/// * wide: centered max-width page, controls card on the left of the preview
+/// * medium landscape: controls in a left side panel
 /// * medium portrait: controls in a collapsible panel under the preview
 /// * narrow: controls in a modal bottom sheet opened from a button
 class AdaptiveWorkspace extends StatefulWidget {
@@ -36,10 +46,8 @@ class AdaptiveWorkspace extends StatefulWidget {
 class _AdaptiveWorkspaceState extends State<AdaptiveWorkspace> {
   bool _bottomPanelOpen = true;
 
-  Widget _panel(Widget child) => SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: child,
-      );
+  Widget _panel(Widget child) =>
+      SingleChildScrollView(padding: const EdgeInsets.all(16), child: child);
 
   Future<void> _openSheet() {
     return showModalBottomSheet<void>(
@@ -52,11 +60,12 @@ class _AdaptiveWorkspaceState extends State<AdaptiveWorkspace> {
         initialChildSize: 0.65,
         minChildSize: 0.35,
         maxChildSize: 0.95,
-        builder: (BuildContext context, ScrollController controller) => SingleChildScrollView(
-          controller: controller,
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-          child: widget.controls,
-        ),
+        builder: (BuildContext context, ScrollController controller) =>
+            SingleChildScrollView(
+              controller: controller,
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              child: widget.controls,
+            ),
       ),
     );
   }
@@ -69,12 +78,43 @@ class _AdaptiveWorkspaceState extends State<AdaptiveWorkspace> {
         final bool landscape = constraints.maxWidth > constraints.maxHeight;
         final ColorScheme scheme = Theme.of(context).colorScheme;
 
-        if (factor == FormFactor.wide || (factor == FormFactor.medium && landscape)) {
-          final double panelWidth = factor == FormFactor.wide ? 380 : 320;
+        if (factor == FormFactor.wide) {
+          // Centered "dashboard": a controls card beside the preview area,
+          // both inset from the window edges and capped in width.
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: wideContentMaxWidth),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    SizedBox(
+                      width: 360,
+                      child: PanelCard(
+                        title: widget.controlsLabel,
+                        icon: Icons.tune,
+                        expand: true,
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(20),
+                          child: widget.controls,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 24),
+                    Expanded(child: widget.preview),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        if (factor == FormFactor.medium && landscape) {
           return Row(
             children: <Widget>[
               SizedBox(
-                width: panelWidth,
+                width: 320,
                 child: Material(
                   color: scheme.surface,
                   shape: Border(right: BorderSide(color: scheme.outline)),
@@ -99,13 +139,18 @@ class _AdaptiveWorkspaceState extends State<AdaptiveWorkspace> {
                     ListTile(
                       title: Text(widget.controlsLabel),
                       trailing: Icon(
-                        _bottomPanelOpen ? Icons.expand_more : Icons.expand_less,
+                        _bottomPanelOpen
+                            ? Icons.expand_more
+                            : Icons.expand_less,
                       ),
-                      onTap: () => setState(() => _bottomPanelOpen = !_bottomPanelOpen),
+                      onTap: () =>
+                          setState(() => _bottomPanelOpen = !_bottomPanelOpen),
                     ),
                     if (_bottomPanelOpen)
                       ConstrainedBox(
-                        constraints: BoxConstraints(maxHeight: constraints.maxHeight * 0.4),
+                        constraints: BoxConstraints(
+                          maxHeight: constraints.maxHeight * 0.4,
+                        ),
                         child: _panel(widget.controls),
                       ),
                   ],

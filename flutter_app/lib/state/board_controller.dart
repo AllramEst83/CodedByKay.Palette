@@ -74,7 +74,28 @@ class BoardController extends ChangeNotifier {
 
   void setMode(BoardMode value) {
     mode = value;
+    if (mode == BoardMode.dynamic) _restoreNaturalRatios();
     notifyListeners();
+  }
+
+  /// Images placed while in grid mode got a default 260x200 box; on the
+  /// dynamic canvas every image must show at its original aspect ratio, so
+  /// refit each one (keeping its longest side) and keep it on the canvas.
+  void _restoreNaturalRatios() {
+    for (final BoardImage img in images) {
+      if ((img.w / img.h - img.aspect).abs() < 0.01) continue;
+      final double longest = math.max(img.w, img.h);
+      if (img.aspect >= 1) {
+        img.w = longest;
+        img.h = longest / img.aspect;
+      } else {
+        img.h = longest;
+        img.w = longest * img.aspect;
+      }
+      final BoardPoint p = clampPosition(img.x, img.y, img.w, img.h);
+      img.x = p.x;
+      img.y = p.y;
+    }
   }
 
   void setColumns(int value) {
@@ -408,5 +429,8 @@ class BoardController extends ChangeNotifier {
     _orderCounter = math.max(_orderCounter, group.order + 1);
   }
 
-  void finishHydration() => notifyListeners();
+  void finishHydration() {
+    if (mode == BoardMode.dynamic) _restoreNaturalRatios();
+    notifyListeners();
+  }
 }

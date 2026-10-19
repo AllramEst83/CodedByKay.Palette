@@ -18,6 +18,7 @@ import '../responsive.dart';
 import '../widgets/color_picker.dart';
 import '../widgets/common.dart';
 import '../widgets/image_drop_zone.dart';
+import '../widgets/panel_card.dart';
 import 'dynamic_board_view.dart';
 
 class MoodBoardPage extends StatelessWidget {
@@ -34,7 +35,9 @@ class MoodBoardPage extends StatelessWidget {
 }
 
 Future<void> addBoardImages(BoardController board) async {
-  final List<PickedImage> picked = await PickerService.pickImages(multiple: true);
+  final List<PickedImage> picked = await PickerService.pickImages(
+    multiple: true,
+  );
   await board.addPickedImages(picked);
 }
 
@@ -59,7 +62,11 @@ Future<void> exportBoard(BoardController board) async {
       AppMessenger.show('Nothing to export yet!', isError: true);
       return;
     }
-    final bytes = await ImageService.renderToPng(plan.pixelWidth, plan.pixelHeight, plan.paint);
+    final bytes = await ImageService.renderToPng(
+      plan.pixelWidth,
+      plan.pixelHeight,
+      plan.paint,
+    );
     await ExportService.savePng(bytes, 'mood-board.png');
   } catch (err) {
     AppMessenger.show('Error exporting image: $err', isError: true);
@@ -81,39 +88,86 @@ class MoodBoardControls extends StatelessWidget {
   Widget build(BuildContext context) {
     final BoardController b = context.watch<BoardController>();
     final bool grid = b.mode == BoardMode.grid;
+    final bool wide = isWideLayout(context);
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         ControlSection(
           title: 'Board',
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: <Widget>[
-              FilledButton.icon(
-                onPressed: b.loading ? null : () => addBoardImages(b),
-                icon: const Icon(Icons.add_photo_alternate_outlined),
-                label: const Text('Add images'),
-              ),
-              OutlinedButton.icon(
-                onPressed: b.loading ? null : b.loadSampleBoard,
-                icon: const Icon(Icons.auto_awesome_outlined),
-                label: const Text('Sample board'),
-              ),
-              OutlinedButton.icon(
-                onPressed: b.isEmpty ? null : () => exportBoard(b),
-                icon: const Icon(Icons.download),
-                label: const Text('Download PNG'),
-              ),
-              OutlinedButton.icon(
-                onPressed: b.isEmpty ? null : () => _confirmClear(context, b),
-                style: OutlinedButton.styleFrom(foregroundColor: AppColors.rose400),
-                icon: const Icon(Icons.delete_outline),
-                label: const Text('Clear board'),
-              ),
-            ],
-          ),
+          child: wide
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    FilledButton.icon(
+                      onPressed: b.loading ? null : () => addBoardImages(b),
+                      icon: const Icon(Icons.add_photo_alternate_outlined),
+                      label: const Text('Add images'),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: b.loading ? null : b.loadSampleBoard,
+                            icon: const Icon(Icons.auto_awesome_outlined),
+                            label: const Text('Sample'),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: b.isEmpty
+                                ? null
+                                : () => _confirmClear(context, b),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.rose400,
+                            ),
+                            icon: const Icon(Icons.delete_outline),
+                            label: const Text('Clear'),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Or drop images anywhere on the board.',
+                      style: Theme.of(context).textTheme.bodySmall
+                          ?.copyWith(color: AppColors.slate400),
+                    ),
+                  ],
+                )
+              : Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: <Widget>[
+                    FilledButton.icon(
+                      onPressed: b.loading ? null : () => addBoardImages(b),
+                      icon: const Icon(Icons.add_photo_alternate_outlined),
+                      label: const Text('Add images'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: b.loading ? null : b.loadSampleBoard,
+                      icon: const Icon(Icons.auto_awesome_outlined),
+                      label: const Text('Sample board'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: b.isEmpty ? null : () => exportBoard(b),
+                      icon: const Icon(Icons.download),
+                      label: const Text('Download PNG'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: b.isEmpty
+                          ? null
+                          : () => _confirmClear(context, b),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.rose400,
+                      ),
+                      icon: const Icon(Icons.delete_outline),
+                      label: const Text('Clear board'),
+                    ),
+                  ],
+                ),
         ),
         ControlSection(
           title: 'Mode',
@@ -140,7 +194,9 @@ class MoodBoardControls extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               FilledButton.tonalIcon(
-                onPressed: b.selectedImage == null ? null : () => b.extractSelectedPalette(),
+                onPressed: b.selectedImage == null
+                    ? null
+                    : () => b.extractSelectedPalette(),
                 icon: const Icon(Icons.colorize),
                 label: const Text('Extract from selected image'),
               ),
@@ -149,9 +205,7 @@ class MoodBoardControls extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 6),
                   child: Text(
                     'Select an image on the board first.',
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
+                    style: Theme.of(context).textTheme.bodySmall
                         ?.copyWith(color: AppColors.slate400),
                   ),
                 ),
@@ -175,7 +229,14 @@ class MoodBoardControls extends StatelessWidget {
           ControlSection(
             title: 'Columns',
             child: OptionChips<int>(
-              options: const <int, String>{1: '1', 2: '2', 3: '3', 4: '4', 5: '5'},
+              options: const <int, String>{
+                1: '1',
+                2: '2',
+                3: '3',
+                4: '4',
+                5: '5',
+              },
+              columns: 5,
               selected: b.columns,
               onSelected: b.setColumns,
             ),
@@ -184,8 +245,11 @@ class MoodBoardControls extends StatelessWidget {
             title: 'Cell ratio',
             child: OptionChips<String>(
               options: _ratioLabels,
+              columns: 5,
               selected: b.ratio,
-              tooltips: const <Object?, String>{'original': "Keep each image's original aspect ratio"},
+              tooltips: const <Object?, String>{
+                'original': "Keep each image's original aspect ratio",
+              },
               onSelected: b.setRatio,
             ),
           ),
@@ -226,20 +290,43 @@ class MoodBoardControls extends StatelessWidget {
             ),
           ),
         ],
-        ControlSection(title: 'Background', child: _BackgroundPicker(board: b)),
+        ControlSection(
+          title: 'Background',
+          child: _BackgroundPicker(board: b),
+        ),
+        if (wide)
+          SizedBox(
+            height: 48,
+            child: FilledButton.icon(
+              onPressed: b.isEmpty ? null : () => exportBoard(b),
+              icon: const Icon(Icons.download),
+              label: const Text('Download board PNG'),
+            ),
+          ),
       ],
     );
   }
 
-  Future<void> _confirmClear(BuildContext context, BoardController board) async {
+  Future<void> _confirmClear(
+    BuildContext context,
+    BoardController board,
+  ) async {
     final bool? ok = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) => AlertDialog(
         title: const Text('Clear the board?'),
-        content: const Text('This removes every image, note and palette from the board.'),
+        content: const Text(
+          'This removes every image, note and palette from the board.',
+        ),
         actions: <Widget>[
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Clear')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Clear'),
+          ),
         ],
       ),
     );
@@ -255,8 +342,9 @@ class _BackgroundPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String current = board.bgColor.toLowerCase();
-    final bool isPreset =
-        backgroundPresets.any((BackgroundPreset p) => p.hex.toLowerCase() == current);
+    final bool isPreset = backgroundPresets.any(
+      (BackgroundPreset p) => p.hex.toLowerCase() == current,
+    );
     return Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -274,7 +362,10 @@ class _BackgroundPicker extends StatelessWidget {
           icon: Icons.colorize,
           selected: !isPreset,
           onTap: () async {
-            final String? picked = await showColorPickerDialog(context, board.bgColor);
+            final String? picked = await showColorPickerDialog(
+              context,
+              board.bgColor,
+            );
             if (picked != null) board.setBgColor(picked);
           },
         ),
@@ -326,7 +417,9 @@ class _BgSwatch extends StatelessWidget {
                 ),
                 child: selected
                     ? Icon(Icons.check, size: 18, color: _checkColor(color))
-                    : (icon == null ? null : Icon(icon, size: 18, color: AppColors.slate400)),
+                    : (icon == null
+                          ? null
+                          : Icon(icon, size: 18, color: AppColors.slate400)),
               ),
             ),
           ),
@@ -379,7 +472,9 @@ class _ExtractedSwatches extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
-                            color: colors[i].isLight ? AppColors.slate900 : Colors.white,
+                            color: colors[i].isLight
+                                ? AppColors.slate900
+                                : Colors.white,
                           ),
                         ),
                         Text(
@@ -388,7 +483,9 @@ class _ExtractedSwatches extends StatelessWidget {
                             fontFamily: monoFont,
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
-                            color: colors[i].isLight ? AppColors.slate900 : Colors.white,
+                            color: colors[i].isLight
+                                ? AppColors.slate900
+                                : Colors.white,
                           ),
                         ),
                       ],
@@ -411,7 +508,14 @@ class MoodBoardPreview extends StatelessWidget {
     final BoardController b = context.watch<BoardController>();
     return ImageDropZone(
       onImages: b.addPickedImages,
-      child: _boardColumn(b),
+      child: isWideLayout(context)
+          ? PanelCard(
+              title: 'Mood board',
+              icon: Icons.dashboard_outlined,
+              expand: true,
+              child: _boardColumn(b),
+            )
+          : _boardColumn(b),
     );
   }
 
@@ -422,8 +526,15 @@ class MoodBoardPreview extends StatelessWidget {
         const BoardItemStrip(),
         Expanded(
           child: b.isEmpty
-              ? (b.loading ? const Padding(padding: EdgeInsets.all(16), child: ShimmerBox()) : const _EmptyBoard())
-              : (b.mode == BoardMode.grid ? const _GridCanvas() : const DynamicBoardView()),
+              ? (b.loading
+                    ? const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: ShimmerBox(),
+                      )
+                    : const _EmptyBoard())
+              : (b.mode == BoardMode.grid
+                    ? const _GridCanvas()
+                    : const DynamicBoardView()),
         ),
       ],
     );
@@ -488,9 +599,7 @@ class _GridCanvas extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             '${plan.pixelWidth} × ${plan.pixelHeight} px',
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
+            style: Theme.of(context).textTheme.bodySmall
                 ?.copyWith(color: AppColors.slate400, fontFamily: monoFont),
           ),
         ],
@@ -509,7 +618,9 @@ class BoardItemStrip extends StatelessWidget {
     final List<OrderedBoardItem> items = b.orderedItems;
     if (items.isEmpty) return const SizedBox.shrink();
 
-    final OrderedBoardItem? selected = items.cast<OrderedBoardItem?>().firstWhere(
+    final OrderedBoardItem? selected = items
+        .cast<OrderedBoardItem?>()
+        .firstWhere(
           (OrderedBoardItem? i) => i!.id == b.selectedId,
           orElse: () => null,
         );
@@ -529,7 +640,11 @@ class BoardItemStrip extends StatelessWidget {
               separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (BuildContext context, int index) {
                 final OrderedBoardItem item = items[index];
-                return _Thumb(item: item, selected: item.id == b.selectedId, position: index + 1);
+                return _Thumb(
+                  item: item,
+                  selected: item.id == b.selectedId,
+                  position: index + 1,
+                );
               },
             ),
           ),
@@ -540,14 +655,18 @@ class BoardItemStrip extends StatelessWidget {
                 children: <Widget>[
                   Expanded(
                     child: Text(
-                      selected is BoardImage ? selected.name : 'Palette from ${(selected as SwatchGroup).sourceName}',
+                      selected is BoardImage
+                          ? selected.name
+                          : 'Palette from ${(selected as SwatchGroup).sourceName}',
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ),
                   IconButton(
                     tooltip: 'Move earlier',
-                    onPressed: selectedIndex > 0 ? () => b.moveItem(selected.id, -1) : null,
+                    onPressed: selectedIndex > 0
+                        ? () => b.moveItem(selected.id, -1)
+                        : null,
                     icon: const Icon(Icons.chevron_left),
                   ),
                   IconButton(
@@ -558,7 +677,9 @@ class BoardItemStrip extends StatelessWidget {
                     icon: const Icon(Icons.chevron_right),
                   ),
                   IconButton(
-                    tooltip: selected is BoardImage ? 'Remove image' : 'Delete palette',
+                    tooltip: selected is BoardImage
+                        ? 'Remove image'
+                        : 'Delete palette',
                     color: AppColors.rose400,
                     onPressed: () => selected is BoardImage
                         ? b.removeImage(selected.id)
@@ -575,7 +696,11 @@ class BoardItemStrip extends StatelessWidget {
 }
 
 class _Thumb extends StatelessWidget {
-  const _Thumb({required this.item, required this.selected, required this.position});
+  const _Thumb({
+    required this.item,
+    required this.selected,
+    required this.position,
+  });
 
   final OrderedBoardItem item;
   final bool selected;
@@ -613,8 +738,15 @@ class _Thumb extends StatelessWidget {
                   ? RawImage(image: it.image, fit: BoxFit.cover)
                   : Column(
                       children: <Widget>[
-                        for (final Swatch s in (it as SwatchGroup).colors.take(6))
-                          Expanded(child: ColoredBox(color: Color(s.argb), child: const SizedBox.expand())),
+                        for (final Swatch s in (it as SwatchGroup).colors.take(
+                          6,
+                        ))
+                          Expanded(
+                            child: ColoredBox(
+                              color: Color(s.argb),
+                              child: const SizedBox.expand(),
+                            ),
+                          ),
                       ],
                     ),
             ),

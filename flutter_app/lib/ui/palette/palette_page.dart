@@ -17,6 +17,7 @@ import '../painters/palette_composite.dart';
 import '../responsive.dart';
 import '../widgets/common.dart';
 import '../widgets/image_drop_zone.dart';
+import '../widgets/panel_card.dart';
 
 class PalettePage extends StatelessWidget {
   const PalettePage({super.key});
@@ -88,43 +89,73 @@ class PaletteControls extends StatelessWidget {
   };
 
   static const Map<String, String> _harmonyTips = <String, String>{
-    'complementary': 'Base color plus its opposite on the color wheel — high contrast',
-    'analogous': 'Base color plus its neighbors on the color wheel — calm and cohesive',
+    'complementary':
+        'Base color plus its opposite on the color wheel — high contrast',
+    'analogous':
+        'Base color plus its neighbors on the color wheel — calm and cohesive',
     'triadic': 'Three hues evenly spaced around the color wheel — balanced and vibrant',
-    'tetradic': 'Four hues evenly spaced around the color wheel — rich and varied',
+    'tetradic':
+        'Four hues evenly spaced around the color wheel — rich and varied',
   };
 
   @override
   Widget build(BuildContext context) {
     final PaletteController c = context.watch<PaletteController>();
-    final String themeSelection = c.activeTheme ?? (c.activeHarmony == null ? 'original' : '');
+    final String themeSelection =
+        c.activeTheme ?? (c.activeHarmony == null ? 'original' : '');
+    final bool wide = isWideLayout(context);
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         ControlSection(
           title: 'Image',
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: <Widget>[
-              FilledButton.icon(
-                onPressed: c.loading ? null : () => pickPaletteImage(c),
-                icon: const Icon(Icons.upload_file),
-                label: const Text('Choose image'),
-              ),
-              OutlinedButton.icon(
-                onPressed: c.loading ? null : c.loadSample,
-                icon: const Icon(Icons.image_outlined),
-                label: const Text('Sample'),
-              ),
-              OutlinedButton.icon(
-                onPressed: c.hasImage ? () => exportPaletteComposite(c) : null,
-                icon: const Icon(Icons.download),
-                label: const Text('Download PNG'),
-              ),
-            ],
-          ),
+          child: wide
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    FilledButton.icon(
+                      onPressed: c.loading ? null : () => pickPaletteImage(c),
+                      icon: const Icon(Icons.upload_file),
+                      label: const Text('Choose image'),
+                    ),
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      onPressed: c.loading ? null : c.loadSample,
+                      icon: const Icon(Icons.image_outlined),
+                      label: const Text('Sample image'),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Or drop an image anywhere on the preview.',
+                      style: Theme.of(context).textTheme.bodySmall
+                          ?.copyWith(color: AppColors.slate400),
+                    ),
+                  ],
+                )
+              : Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: <Widget>[
+                    FilledButton.icon(
+                      onPressed: c.loading ? null : () => pickPaletteImage(c),
+                      icon: const Icon(Icons.upload_file),
+                      label: const Text('Choose image'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: c.loading ? null : c.loadSample,
+                      icon: const Icon(Icons.image_outlined),
+                      label: const Text('Sample'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: c.hasImage
+                          ? () => exportPaletteComposite(c)
+                          : null,
+                      icon: const Icon(Icons.download),
+                      label: const Text('Download PNG'),
+                    ),
+                  ],
+                ),
         ),
         ControlSection(
           title: 'Number of colors',
@@ -151,7 +182,8 @@ class PaletteControls extends StatelessWidget {
           child: OptionChips<String>(
             options: <String, String>{
               'original': 'Original',
-              for (final String n in themeNames) n: '${n[0].toUpperCase()}${n.substring(1)}',
+              for (final String n in themeNames)
+                n: '${n[0].toUpperCase()}${n.substring(1)}',
             },
             selected: themeSelection,
             tooltips: _themeTips,
@@ -163,6 +195,7 @@ class PaletteControls extends StatelessWidget {
           trailing: _BaseColorIndicator(color: c.baseColor),
           child: OptionChips<String>(
             options: _harmonyLabels,
+            columns: 2,
             selected: c.activeHarmony,
             tooltips: _harmonyTips,
             onSelected: c.applyHarmonyByName,
@@ -187,6 +220,15 @@ class PaletteControls extends StatelessWidget {
             ],
           ),
         ),
+        if (wide)
+          SizedBox(
+            height: 48,
+            child: FilledButton.icon(
+              onPressed: c.hasImage ? () => exportPaletteComposite(c) : null,
+              icon: const Icon(Icons.download),
+              label: const Text('Download composite PNG'),
+            ),
+          ),
       ],
     );
   }
@@ -216,7 +258,10 @@ class _BaseColorIndicator extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 6),
-          Text(c?.hex ?? '—', style: const TextStyle(fontFamily: monoFont, fontSize: 12)),
+          Text(
+            c?.hex ?? '—',
+            style: const TextStyle(fontFamily: monoFont, fontSize: 12),
+          ),
         ],
       ),
     );
@@ -244,18 +289,20 @@ class _PalettePreviewBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final PaletteController c = context.watch<PaletteController>();
+    final bool wide = isWideLayout(context);
 
     if (!c.hasImage) {
       if (c.loading) {
-        return const Padding(
-          padding: EdgeInsets.all(16),
-          child: ShimmerBox(borderRadius: 16),
+        return Padding(
+          padding: wide ? EdgeInsets.zero : const EdgeInsets.all(16),
+          child: const ShimmerBox(borderRadius: 16),
         );
       }
-      return EmptyState(
+      final Widget empty = EmptyState(
         icon: Icons.palette_outlined,
         title: 'Extract a color palette',
-        message: 'Choose an image to pull its dominant colors, or try the sample.',
+        message:
+            'Choose an image to pull its dominant colors, or try the sample.',
         actions: <Widget>[
           FilledButton.icon(
             onPressed: () => pickPaletteImage(c),
@@ -267,6 +314,46 @@ class _PalettePreviewBody extends StatelessWidget {
             icon: const Icon(Icons.image_outlined),
             label: const Text('Use sample'),
           ),
+        ],
+      );
+      return wide ? PanelCard(expand: true, child: empty) : empty;
+    }
+
+    if (wide) {
+      // Swatches first so they stay visible without scrolling past the image.
+      return Stack(
+        children: <Widget>[
+          const SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                PanelCard(
+                  title: 'Extracted palette',
+                  icon: Icons.palette_outlined,
+                  child: Padding(
+                    padding: EdgeInsets.all(20),
+                    child: _SwatchGrid(),
+                  ),
+                ),
+                SizedBox(height: 24),
+                PanelCard(
+                  title: 'Composite preview',
+                  icon: Icons.image_outlined,
+                  child: Padding(
+                    padding: EdgeInsets.all(20),
+                    child: _CompositeView(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (c.loading)
+            const Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: LinearProgressIndicator(),
+            ),
         ],
       );
     }
@@ -285,7 +372,12 @@ class _PalettePreviewBody extends StatelessWidget {
           ),
         ),
         if (c.loading)
-          const Positioned(top: 0, left: 0, right: 0, child: LinearProgressIndicator()),
+          const Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: LinearProgressIndicator(),
+          ),
       ],
     );
   }
@@ -299,7 +391,10 @@ class _CompositeView extends StatelessWidget {
     final PaletteController c = context.watch<PaletteController>();
     final image = c.image;
     if (image == null || c.displayedColors.isEmpty) {
-      return const AspectRatio(aspectRatio: 3 / 2, child: ShimmerBox(borderRadius: 16));
+      return const AspectRatio(
+        aspectRatio: 3 / 2,
+        child: ShimmerBox(borderRadius: 16),
+      );
     }
     final PaletteCompositePlan plan = PaletteCompositePlan.compute(
       imageWidth: image.width,
@@ -319,14 +414,17 @@ class _CompositeView extends StatelessWidget {
               maxHeight: MediaQuery.sizeOf(context).height * 0.7,
             ),
             child: Semantics(
-              label: 'Palette preview of ${c.imageName ?? 'image'} with '
+              label:
+                  'Palette preview of ${c.imageName ?? 'image'} with '
                   '${c.displayedColors.length} colors',
               image: true,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: AspectRatio(
                   aspectRatio: plan.width / plan.height,
-                  child: CustomPaint(painter: PaletteCompositePainter(plan: plan, image: image)),
+                  child: CustomPaint(
+                    painter: PaletteCompositePainter(plan: plan, image: image),
+                  ),
                 ),
               ),
             ),
@@ -335,9 +433,7 @@ class _CompositeView extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           '${plan.pixelWidth} × ${plan.pixelHeight} px',
-          style: Theme.of(context)
-              .textTheme
-              .bodySmall
+          style: Theme.of(context).textTheme.bodySmall
               ?.copyWith(color: AppColors.slate400, fontFamily: monoFont),
         ),
       ],
@@ -356,7 +452,10 @@ class _SwatchGrid extends StatelessWidget {
       children: <Widget>[
         LayoutBuilder(
           builder: (BuildContext context, BoxConstraints constraints) {
-            final int columns = math.max(2, (constraints.maxWidth / 150).floor());
+            final int columns = math.max(
+              2,
+              (constraints.maxWidth / 150).floor(),
+            );
             return GridView.count(
               crossAxisCount: columns,
               shrinkWrap: true,
@@ -373,7 +472,9 @@ class _SwatchGrid extends StatelessWidget {
                     onCopy: () => AppMessenger.copy(c.displayedColors[i].hex),
                     onSetBase: () {
                       c.setBaseColorIndex(i);
-                      AppMessenger.show('Harmony base set to ${c.displayedColors[i].hex}');
+                      AppMessenger.show(
+                        'Harmony base set to ${c.displayedColors[i].hex}',
+                      );
                     },
                   ),
               ],
@@ -383,7 +484,8 @@ class _SwatchGrid extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           'Tap a swatch to copy its HEX. Long-press or right-click to use it as the harmony base.',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.slate400),
+          style: Theme.of(context).textTheme.bodySmall
+              ?.copyWith(color: AppColors.slate400),
         ),
       ],
     );
@@ -409,10 +511,13 @@ class SwatchTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color fg = swatch.isLight ? AppColors.slate900 : Colors.white;
-    final Color badge = swatch.isLight ? const Color(0x26000000) : const Color(0x33FFFFFF);
+    final Color badge = swatch.isLight
+        ? const Color(0x26000000)
+        : const Color(0x33FFFFFF);
     return Semantics(
       button: true,
-      label: 'Swatch ${index + 1}, ${swatch.hex}${isBase ? ', harmony base' : ''}. '
+      label:
+          'Swatch ${index + 1}, ${swatch.hex}${isBase ? ', harmony base' : ''}. '
           'Activate to copy.',
       customSemanticsActions: <CustomSemanticsAction, VoidCallback>{
         const CustomSemanticsAction(label: 'Use as harmony base'): onSetBase,
@@ -445,10 +550,17 @@ class SwatchTile extends StatelessWidget {
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           child: Text(
                             '#${index + 1}',
-                            style: TextStyle(color: fg, fontSize: 11, fontWeight: FontWeight.w700),
+                            style: TextStyle(
+                              color: fg,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
                       ),
@@ -459,9 +571,14 @@ class SwatchTile extends StatelessWidget {
                           children: <Widget>[
                             Icon(Icons.anchor, size: 14, color: fg),
                             const SizedBox(width: 2),
-                            Text('BASE',
-                                style: TextStyle(
-                                    color: fg, fontSize: 10, fontWeight: FontWeight.w800)),
+                            Text(
+                              'BASE',
+                              style: TextStyle(
+                                color: fg,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
                           ],
                         ),
                     ],
@@ -479,7 +596,11 @@ class SwatchTile extends StatelessWidget {
                   ),
                   Text(
                     swatch.rgbLabel,
-                    style: TextStyle(fontFamily: monoFont, fontSize: 11, color: fg),
+                    style: TextStyle(
+                      fontFamily: monoFont,
+                      fontSize: 11,
+                      color: fg,
+                    ),
                   ),
                 ],
               ),
