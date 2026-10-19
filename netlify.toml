@@ -1,0 +1,10 @@
+[build]
+  # Flutter is installed by the plugin below into ./flutter during the build.
+  command = "flutter/bin/flutter build web --release"
+  publish = "build/web"
+
+[[plugins]]
+  package = "netlify-plugin-flutter"
+
+  [plugins.inputs]
+    channel = "stable"

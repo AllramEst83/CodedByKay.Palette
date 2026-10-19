@@ -55,3 +55,7 @@ app.*.map.json
 
 # iOS/macOS build output (not a target, kept out in case it is added later)
 **/ios/Flutter/.last_build_id
+
+# Netlify (Flutter SDK installed by netlify-plugin-flutter)
+/flutter/
+.netlify/
