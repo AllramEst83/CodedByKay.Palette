@@ -29,12 +29,11 @@ Layouts depend on available width, never on the platform:
 |---|---|
 | < 600 dp | bottom navigation, preview on top, controls in a modal bottom sheet |
 | 600-1023 dp | navigation rail; controls in a side panel (landscape) or a collapsible bottom panel (portrait) |
-| >= 1024 dp | top tabs, ~380 px control panel on the left, large preview on the right |
+| >= 1024 dp | top tabs, centered page with a controls card (360 px) on the left, large preview cards on the right |
 
 ## Setup
 
 ```sh
-cd flutter_app
 flutter pub get
 ```
 

@@ -5,7 +5,7 @@ Goal: build a Flutter version of the Palette app (palette extractor + mood board
 ## Decisions
 
 - The original vanilla web app has been removed from the repo (it remains in git history, before the "Remove legacy vanilla web app" commit). `.agents/rules` holds the Flutter development rules.
-- The Flutter project lives in `flutter_app/` at the repo root. Targets: `android` and `web`.
+- The Flutter project lives at the repo root. Targets: `android` and `web`.
 - Behavior is ported from the existing JS, not redesigned. Persisted JSON keeps the same field names (`version: 1`).
 - Platforms: Android and web only. Devices: Android phones and Android tablets. Tablets are a first-class target, not an afterthought. Layouts are chosen by available width, not by device type, so split-screen, foldables, and rotation work too.
 - Fallback if Flutter proves too costly: wrap the existing web app with Capacitor or a PWA/TWA for Android only.
@@ -28,7 +28,7 @@ Goal: build a Flutter version of the Palette app (palette extractor + mood board
 
 ## Phase 0: Scaffold and tooling
 
-- `flutter create` into `flutter_app/` (platforms: android, web); set the app id and name.
+- `flutter create` at the repo root (platforms: android, web); set the app id and name.
 - Dependencies: `provider`, `shared_preferences`, `file_picker`, `path_provider`, `image`. Add `desktop_drop` only if a version compatible with `file_picker` resolves (they conflict on `cross_file` at `file_picker` 12+).
 - Dark slate/indigo theme matching the original look (Tailwind slate/indigo).
 - Add `analysis_options.yaml` lints. Set up a CI workflow: `flutter analyze`, `flutter test`, `flutter build web`.
@@ -94,7 +94,7 @@ Goal: build a Flutter version of the Palette app (palette extractor + mood board
 
 - Android: app icon (reuse `assets/icons/color-palette.png`), adaptive icon, release signing, `flutter build appbundle`. Declare tablet support in the manifest (no `required` restriction on screen size, resizable activity, all orientations) and prepare tablet screenshots for the store listing.
 - Web: `flutter build web`, PWA manifest and icons, hosting decision (static host).
-- README for `flutter_app/`: setup, run, build.
+- README for the project: setup, run, build.
 - Exit criteria: signed AAB and deployable web build produced from CI.
 
 ## Risks

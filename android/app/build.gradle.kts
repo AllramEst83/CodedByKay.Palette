@@ -51,7 +51,7 @@ android {
 
     buildTypes {
         release {
-            // Signed with android/key.properties when present (see flutter_app/README.md);
+            // Signed with android/key.properties when present (see README.md);
             // otherwise falls back to the debug key so local release builds still run.
             signingConfig = if (hasReleaseKey) {
                 signingConfigs.getByName("release")
