@@ -4,7 +4,7 @@ Goal: build a Flutter version of the Palette app (palette extractor + mood board
 
 ## Decisions
 
-- The vanilla web app (`index.html`, `js/`, `css/`) stays in the repo as the behavior reference and is no longer extended. `.agents/rules` now holds the Flutter development rules.
+- The original vanilla web app has been removed from the repo (it remains in git history, before the "Remove legacy vanilla web app" commit). `.agents/rules` holds the Flutter development rules.
 - The Flutter project lives in `flutter_app/` at the repo root. Targets: `android` and `web`.
 - Behavior is ported from the existing JS, not redesigned. Persisted JSON keeps the same field names (`version: 1`).
 - Platforms: Android and web only. Devices: Android phones and Android tablets. Tablets are a first-class target, not an afterthought. Layouts are chosen by available width, not by device type, so split-screen, foldables, and rotation work too.
@@ -30,7 +30,7 @@ Goal: build a Flutter version of the Palette app (palette extractor + mood board
 
 - `flutter create` into `flutter_app/` (platforms: android, web); set the app id and name.
 - Dependencies: `provider`, `shared_preferences`, `file_picker`, `path_provider`, `image`. Add `desktop_drop` only if a version compatible with `file_picker` resolves (they conflict on `cross_file` at `file_picker` 12+).
-- Dark slate/indigo theme matching the current look (see `index.html` Tailwind classes).
+- Dark slate/indigo theme matching the original look (Tailwind slate/indigo).
 - Add `analysis_options.yaml` lints. Set up a CI workflow: `flutter analyze`, `flutter test`, `flutter build web`.
 - Exit criteria: empty app builds for web and runs on an Android emulator; CI is green.
 

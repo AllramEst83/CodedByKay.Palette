@@ -1,7 +1,7 @@
 # Palette & MoodBoard (Flutter)
 
-Flutter port of the vanilla web app in the repository root. One codebase ships as an
-**Android** app (phones and tablets) and a **web** app. Behavior is ported from `../js/`;
+Flutter port of the original vanilla web app (since removed; see git history). One codebase ships as an
+**Android** app (phones and tablets) and a **web** app. Behavior was ported from the original `js/` sources;
 persisted state uses the same `palette-app-state-v1` JSON shape (`version: 1`).
 
 ## Features
