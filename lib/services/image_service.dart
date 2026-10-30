@@ -35,29 +35,25 @@ class ImageService {
   /// Longest side of the downscaled copy sampled for color extraction.
   static const int sampleDim = 120;
 
-  /// Decodes [bytes], downscaling on decode so the longest side is at most
-  /// [maxDim]. Throws if the bytes are not a decodable image.
+  /// Decodes [bytes], downscaling so the longest side is at most [maxDim].
+  /// Throws if the bytes are not a decodable image.
+  ///
+  /// Uses [ui.instantiateImageCodec] rather than `ImageDescriptor`, whose
+  /// `width`/`height` getters are unsupported on web.
   static Future<ui.Image> decode(Uint8List bytes, {int maxDim = maxDecodeDim}) async {
-    final ui.ImmutableBuffer buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
-    ui.ImageDescriptor? descriptor;
-    ui.Codec? codec;
+    final ui.Codec codec = await ui.instantiateImageCodec(bytes);
+    final ui.Image decoded;
     try {
-      descriptor = await ui.ImageDescriptor.encoded(buffer);
-      final int longest = math.max(descriptor.width, descriptor.height);
-      int? targetW;
-      int? targetH;
-      if (longest > maxDim) {
-        final double scale = maxDim / longest;
-        targetW = math.max(1, (descriptor.width * scale).round());
-        targetH = math.max(1, (descriptor.height * scale).round());
-      }
-      codec = await descriptor.instantiateCodec(targetWidth: targetW, targetHeight: targetH);
-      final ui.FrameInfo frame = await codec.getNextFrame();
-      return frame.image;
+      decoded = (await codec.getNextFrame()).image;
     } finally {
-      codec?.dispose();
-      descriptor?.dispose();
-      buffer.dispose();
+      codec.dispose();
+    }
+    final ({int w, int h}) size = fitWithin(decoded.width, decoded.height, maxDim);
+    if (size.w == decoded.width && size.h == decoded.height) return decoded;
+    try {
+      return await resize(decoded, size.w, size.h);
+    } finally {
+      decoded.dispose();
     }
   }
 
