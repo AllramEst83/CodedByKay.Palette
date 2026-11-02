@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import '../core/kmeans.dart';
 import '../core/palette_theme.dart';
+import '../core/value_study.dart';
 import '../models/swatch.dart';
 import '../services/app_messenger.dart';
 import '../services/image_service.dart';
@@ -29,6 +30,10 @@ class PaletteController extends ChangeNotifier {
   int paletteCount = 5;
   bool showHexText = true;
   bool showRgbText = false;
+  bool showLightnessText = true;
+  bool grayscale = false;
+  int posterizeLevels = fullTonalRange;
+  bool valueLoading = false;
   String? activeTheme;
   String? activeHarmony;
   int baseColorIndex = 0;
@@ -37,7 +42,21 @@ class PaletteController extends ChangeNotifier {
   int _token = 0;
   Timer? _debounce;
 
+  /// Value studies of [image] by posterize level, so switching back is instant.
+  final Map<int, ui.Image> _valueImages = <int, ui.Image>{};
+  int _valueToken = 0;
+
   bool get hasImage => image != null;
+
+  /// The value study to show, or null when viewing color (or still rendering).
+  ui.Image? get valueImage => grayscale ? _valueImages[posterizeLevels] : null;
+
+  /// The colors drawn with the composite: gray whenever [valueImage] is shown.
+  List<Swatch> get compositeColors => valueImage == null
+      ? displayedColors
+      : displayedColors
+          .map((Swatch s) => valueSwatch(s, posterizeLevels))
+          .toList();
 
   Swatch? get baseColor =>
       baseColorIndex >= 0 && baseColorIndex < sourceColors.length
@@ -129,6 +148,32 @@ class PaletteController extends ChangeNotifier {
     baseColorIndex = _dominantIndex(colors);
     _recompute();
     loading = false;
+    _valueImages.clear();
+    notifyListeners();
+    await _refreshValueImage();
+  }
+
+  /// Renders the value study for the current settings unless it is cached.
+  /// Results from superseded requests are ignored.
+  Future<void> _refreshValueImage() async {
+    final int token = ++_valueToken;
+    final ui.Image? source = image;
+    final int levels = posterizeLevels;
+    if (!grayscale || source == null || _valueImages.containsKey(levels)) {
+      valueLoading = false;
+      return;
+    }
+    valueLoading = true;
+    notifyListeners();
+    try {
+      final ui.Image rendered = await ImageService.renderValueImage(source, levels);
+      if (token != _valueToken) return;
+      _valueImages[levels] = rendered;
+    } catch (err) {
+      if (token != _valueToken) return;
+      AppMessenger.show('Could not render values: $err', isError: true);
+    }
+    valueLoading = false;
     notifyListeners();
   }
 
@@ -199,11 +244,34 @@ class PaletteController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setShowLightnessText(bool value) {
+    showLightnessText = value;
+    notifyListeners();
+  }
+
+  Future<void> setGrayscale(bool value) {
+    grayscale = value;
+    final Future<void> refreshed = _refreshValueImage();
+    notifyListeners();
+    return refreshed;
+  }
+
+  /// [levels] is one of [posterizeLevelOptions].
+  Future<void> setPosterizeLevels(int levels) {
+    posterizeLevels = levels;
+    final Future<void> refreshed = _refreshValueImage();
+    notifyListeners();
+    return refreshed;
+  }
+
   Map<String, Object?> toJson() => <String, Object?>{
         'paletteCountK': paletteCount,
         'sortMode': sortMode.name,
         'showHexText': showHexText,
         'showRgbText': showRgbText,
+        'showLightnessText': showLightnessText,
+        'grayscale': grayscale,
+        'posterizeLevels': posterizeLevels,
         'activeTheme': activeTheme,
         'activeHarmony': activeHarmony,
         'baseColorIndex': baseColorIndex,
@@ -219,12 +287,21 @@ class PaletteController extends ChangeNotifier {
     if (hex is bool) showHexText = hex;
     final Object? rgb = json['showRgbText'];
     if (rgb is bool) showRgbText = rgb;
+    final Object? lightness = json['showLightnessText'];
+    if (lightness is bool) showLightnessText = lightness;
+    final Object? gray = json['grayscale'];
+    if (gray is bool) grayscale = gray;
+    final Object? levels = json['posterizeLevels'];
+    if (levels is num && posterizeLevelOptions.contains(levels.toInt())) {
+      posterizeLevels = levels.toInt();
+    }
     final Object? theme = json['activeTheme'];
     activeTheme = theme is String && themeNames.contains(theme) ? theme : null;
     final Object? harmony = json['activeHarmony'];
     activeHarmony = harmony is String && harmonyNames.contains(harmony) ? harmony : null;
     final Object? base = json['baseColorIndex'];
     if (base is num) baseColorIndex = base.toInt();
+    unawaited(_refreshValueImage());
     notifyListeners();
   }
 }

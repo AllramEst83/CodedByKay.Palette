@@ -129,7 +129,7 @@ List<Swatch> sortPalette(List<Swatch> colors, SortMode mode) {
     case SortMode.prominence:
       copy.sort((Swatch a, Swatch b) => b.count.compareTo(a.count));
     case SortMode.luminance:
-      copy.sort((Swatch a, Swatch b) => a.luminance.compareTo(b.luminance));
+      copy.sort((Swatch a, Swatch b) => a.lightness.compareTo(b.lightness));
     case SortMode.hue:
       copy.sort((Swatch a, Swatch b) => a.hsl.h.compareTo(b.hsl.h));
   }

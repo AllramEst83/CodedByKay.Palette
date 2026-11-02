@@ -30,6 +30,36 @@ double _measure(String text, double size, FontWeight weight) {
   return width;
 }
 
+/// Which color codes are written on each swatch, and how they are arranged into
+/// a main line and an optional smaller line beneath it.
+class _SwatchLabels {
+  const _SwatchLabels(this.showHex, this.showRgb, this.showLightness);
+
+  final bool showHex;
+  final bool showRgb;
+  final bool showLightness;
+
+  bool get any => showHex || showRgb || showLightness;
+
+  String? main(Swatch color) {
+    if (showHex) return color.hex;
+    if (showRgb) return 'rgb(${color.r},${color.g},${color.b})';
+    return showLightness ? color.lightnessLabel : null;
+  }
+
+  String? sub(Swatch color) {
+    final String? rgb = showHex && showRgb ? color.rgbLabel : null;
+    final String? lightness =
+        showLightness && (showHex || showRgb) ? color.lightnessLabel : null;
+    if (rgb != null && lightness != null) return '$rgb · $lightness';
+    return rgb ?? lightness;
+  }
+
+  /// A lone HEX code is drawn a little larger than [fontSize].
+  double mainSize(Swatch color, double fontSize) =>
+      showHex && sub(color) == null ? fontSize + 2 : fontSize;
+}
+
 /// Everything needed to draw the composite (image + swatches) at logical size,
 /// shared by the on-screen preview and the PNG export. Ported from `palette.js`.
 class PaletteCompositePlan {
@@ -40,8 +70,7 @@ class PaletteCompositePlan {
     required this.imgW,
     required this.imgH,
     required this.colors,
-    required this.showHex,
-    required this.showRgb,
+    required this._labels,
     required this.fontSize,
     required this.subFontSize,
     required this.swatchWidths,
@@ -56,14 +85,15 @@ class PaletteCompositePlan {
     required List<Swatch> colors,
     required bool showHex,
     required bool showRgb,
+    bool showLightness = false,
   }) {
     final double imgW = imageWidth.toDouble();
     final double imgH = imageHeight.toDouble();
-    final bool needsLabelSpace = showHex || showRgb;
-    final bool tooNarrow = needsLabelSpace && imgW < colors.length * _minSwatchWidth;
+    final _SwatchLabels labels = _SwatchLabels(showHex, showRgb, showLightness);
+    final bool tooNarrow = labels.any && imgW < colors.length * _minSwatchWidth;
     return tooNarrow
-        ? _sidebar(imgW, imgH, colors, showHex, showRgb)
-        : _strip(imgW, imgH, colors, showHex, showRgb);
+        ? _sidebar(imgW, imgH, colors, labels)
+        : _strip(imgW, imgH, colors, labels);
   }
 
   final double width;
@@ -72,8 +102,7 @@ class PaletteCompositePlan {
   final double imgW;
   final double imgH;
   final List<Swatch> colors;
-  final bool showHex;
-  final bool showRgb;
+  final _SwatchLabels _labels;
   final double fontSize;
   final double subFontSize;
   final List<double> swatchWidths;
@@ -88,25 +117,23 @@ class PaletteCompositePlan {
     List<Swatch> colors,
     double fontSize,
     double subFontSize,
-    bool showHex,
-    bool showRgb,
+    _SwatchLabels labels,
   ) {
     return colors.map((Swatch color) {
       double needed = _minSwatchWidth;
-      if (showHex && showRgb) {
-        final double hexW = _measure(color.hex, fontSize, FontWeight.w700);
-        final double rgbW = _measure(color.rgbLabel, subFontSize, FontWeight.w500);
-        needed = math.max(needed, math.max(hexW, rgbW) + _swatchPaddingX * 2);
-      } else if (showHex) {
+      final String? main = labels.main(color);
+      if (main != null) {
+        final double mainSize = labels.mainSize(color, fontSize);
         needed = math.max(
           needed,
-          _measure(color.hex, fontSize + 2, FontWeight.w700) + _swatchPaddingX * 2,
+          _measure(main, mainSize, FontWeight.w700) + _swatchPaddingX * 2,
         );
-      } else if (showRgb) {
+      }
+      final String? sub = labels.sub(color);
+      if (sub != null) {
         needed = math.max(
           needed,
-          _measure('rgb(${color.r},${color.g},${color.b})', fontSize, FontWeight.w700) +
-              _swatchPaddingX * 2,
+          _measure(sub, subFontSize, FontWeight.w500) + _swatchPaddingX * 2,
         );
       }
       return needed;
@@ -117,19 +144,18 @@ class PaletteCompositePlan {
     double imgW,
     double imgH,
     List<Swatch> colors,
-    bool showHex,
-    bool showRgb,
+    _SwatchLabels labels,
   ) {
     final double stripHeight = math.max(80, (imgH * 0.18).roundToDouble());
     double fontSize = math.max(14, (stripHeight * 0.18).roundToDouble());
     double subFontSize = math.max(10, (stripHeight * 0.12).roundToDouble());
-    List<double> natural = _naturalWidths(colors, fontSize, subFontSize, showHex, showRgb);
+    List<double> natural = _naturalWidths(colors, fontSize, subFontSize, labels);
 
     while (natural.fold<double>(0, (double a, double b) => a + b) > imgW &&
         (fontSize > _minFontSize || subFontSize > _minSubFontSize)) {
       fontSize = math.max(_minFontSize, fontSize - 1);
       subFontSize = math.max(_minSubFontSize, subFontSize - 1);
-      natural = _naturalWidths(colors, fontSize, subFontSize, showHex, showRgb);
+      natural = _naturalWidths(colors, fontSize, subFontSize, labels);
     }
 
     final double naturalTotal = natural.fold<double>(0, (double a, double b) => a + b);
@@ -141,8 +167,7 @@ class PaletteCompositePlan {
       imgW: imgW,
       imgH: imgH,
       colors: colors,
-      showHex: showHex,
-      showRgb: showRgb,
+      labels: labels,
       fontSize: fontSize,
       subFontSize: subFontSize,
       swatchWidths: natural.map((double w) => w * scale).toList(),
@@ -156,8 +181,7 @@ class PaletteCompositePlan {
     double imgW,
     double imgH,
     List<Swatch> colors,
-    bool showHex,
-    bool showRgb,
+    _SwatchLabels labels,
   ) {
     final double rowHeight =
         math.max(_sidebarRowMinHeight, (imgH / colors.length).roundToDouble());
@@ -165,15 +189,14 @@ class PaletteCompositePlan {
     final double rowFont = math.max(13, math.min(20, (rowHeight * 0.32).roundToDouble()));
     final double rowSub = math.max(10, math.min(15, (rowHeight * 0.22).roundToDouble()));
 
-    double maxLabel = colors
-        .map((Swatch c) => _measure(c.hex, rowFont, FontWeight.w700))
-        .fold<double>(0, math.max);
-    if (showRgb) {
-      final double maxRgb = colors
-          .map((Swatch c) => _measure(c.rgbLabel, rowSub, FontWeight.w500))
-          .fold<double>(0, math.max);
-      maxLabel = math.max(maxLabel, maxRgb);
-    }
+    final double maxLabel = colors.map((Swatch c) {
+      final String? main = labels.main(c);
+      final String? sub = labels.sub(c);
+      return math.max(
+        main == null ? 0.0 : _measure(main, labels.mainSize(c, rowFont), FontWeight.w700),
+        sub == null ? 0.0 : _measure(sub, rowSub, FontWeight.w500),
+      );
+    }).fold<double>(0, math.max);
     final double sidebarWidth =
         math.max(_sidebarMinWidth, (maxLabel + _sidebarPaddingX * 2).roundToDouble());
 
@@ -184,8 +207,7 @@ class PaletteCompositePlan {
       imgW: imgW,
       imgH: imgH,
       colors: colors,
-      showHex: showHex,
-      showRgb: showRgb,
+      labels: labels,
       fontSize: rowFont,
       subFontSize: rowSub,
       swatchWidths: const <double>[],
@@ -260,17 +282,15 @@ class PaletteCompositePlan {
           ? const Color.fromRGBO(15, 23, 42, 0.75)
           : const Color.fromRGBO(255, 255, 255, 0.75);
       final double cx = x + w / 2;
-      if (showHex && showRgb) {
-        _text(canvas, color.hex, fontSize, FontWeight.w700, text,
-            Offset(cx, y + stripHeight * 0.38), centered: true);
-        _text(canvas, color.rgbLabel, subFontSize, FontWeight.w500, sub,
+      final String? mainLabel = _labels.main(color);
+      final String? subLabel = _labels.sub(color);
+      if (mainLabel != null) {
+        _text(canvas, mainLabel, _labels.mainSize(color, fontSize), FontWeight.w700, text,
+            Offset(cx, y + stripHeight * (subLabel == null ? 0.5 : 0.38)), centered: true);
+      }
+      if (subLabel != null) {
+        _text(canvas, subLabel, subFontSize, FontWeight.w500, sub,
             Offset(cx, y + stripHeight * 0.68), centered: true);
-      } else if (showHex) {
-        _text(canvas, color.hex, fontSize + 2, FontWeight.w700, text,
-            Offset(cx, y + stripHeight / 2), centered: true);
-      } else if (showRgb) {
-        _text(canvas, 'rgb(${color.r},${color.g},${color.b})', fontSize, FontWeight.w700,
-            text, Offset(cx, y + stripHeight / 2), centered: true);
       }
     }
 
@@ -302,17 +322,15 @@ class PaletteCompositePlan {
       final Color sub = color.isLight
           ? const Color.fromRGBO(15, 23, 42, 0.75)
           : const Color.fromRGBO(255, 255, 255, 0.75);
-      if (showHex && showRgb) {
-        _text(canvas, color.hex, fontSize, FontWeight.w700, text,
-            Offset(textX, y + rowHeight * 0.36), centered: false);
-        _text(canvas, color.rgbLabel, subFontSize, FontWeight.w500, sub,
+      final String? mainLabel = _labels.main(color);
+      final String? subLabel = _labels.sub(color);
+      if (mainLabel != null) {
+        _text(canvas, mainLabel, _labels.mainSize(color, fontSize), FontWeight.w700, text,
+            Offset(textX, y + rowHeight * (subLabel == null ? 0.5 : 0.36)), centered: false);
+      }
+      if (subLabel != null) {
+        _text(canvas, subLabel, subFontSize, FontWeight.w500, sub,
             Offset(textX, y + rowHeight * 0.68), centered: false);
-      } else if (showHex) {
-        _text(canvas, color.hex, fontSize + 2, FontWeight.w700, text,
-            Offset(textX, y + rowHeight / 2), centered: false);
-      } else if (showRgb) {
-        _text(canvas, 'rgb(${color.r},${color.g},${color.b})', fontSize, FontWeight.w700,
-            text, Offset(textX, y + rowHeight / 2), centered: false);
       }
 
       if (i > 0) {

@@ -1,5 +1,10 @@
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:palette_app/core/color_utils.dart';
 import 'package:palette_app/core/kmeans.dart';
+import 'package:palette_app/core/value_study.dart';
 import 'package:palette_app/models/swatch.dart';
 import 'package:palette_app/state/palette_controller.dart';
 import 'package:palette_app/ui/painters/palette_composite.dart';
@@ -61,12 +66,62 @@ void main() {
       await tester.runAsync(c.loadSample);
 
       c.setSortMode(SortMode.luminance);
-      final List<double> lum = c.sourceColors.map((Swatch s) => s.luminance).toList();
+      final List<double> lum = c.sourceColors.map((Swatch s) => s.lightness).toList();
       expect(lum, orderedEquals(<double>[...lum]..sort()));
       expect(c.baseColorIndex, inInclusiveRange(0, c.sourceColors.length - 1));
 
       c.setBaseColorIndex(99); // ignored
       expect(c.baseColorIndex, inInclusiveRange(0, c.sourceColors.length - 1));
+    });
+
+    testWidgets('grayscale renders and caches value studies', (WidgetTester tester) async {
+      final PaletteController c = PaletteController(extractDebounce: Duration.zero);
+      addTearDown(c.dispose);
+      await tester.runAsync(c.loadSample);
+      expect(c.valueImage, isNull);
+      expect(c.compositeColors, same(c.displayedColors));
+
+      await tester.runAsync(() => c.setGrayscale(true));
+      expect(c.valueLoading, isFalse);
+      final ui.Image? gray = c.valueImage;
+      expect(gray, isNotNull);
+      expect(gray!.width, c.image!.width);
+      for (final Swatch s in c.compositeColors) {
+        expect((s.r, s.g), (s.b, s.b));
+      }
+
+      // Posterizing renders a separate study; going back reuses the first one.
+      await tester.runAsync(() => c.setPosterizeLevels(3));
+      expect(c.valueImage, isNot(same(gray)));
+      final Set<int> bands = <int>{
+        for (final double l in <double>[100 / 6, 50, 500 / 6]) grayForLightness(l),
+      };
+      final ByteData? pixels = await tester.runAsync<ByteData?>(() => c.valueImage!.toByteData());
+      final Set<int> rendered = <int>{
+        for (int i = 0; i < pixels!.lengthInBytes; i += 4) pixels.getUint8(i),
+      };
+      expect(bands.containsAll(rendered), isTrue, reason: '$rendered');
+
+      await tester.runAsync(() => c.setPosterizeLevels(fullTonalRange));
+      expect(c.valueImage, same(gray));
+
+      await tester.runAsync(() => c.setGrayscale(false));
+      expect(c.valueImage, isNull);
+      expect(c.compositeColors, same(c.displayedColors));
+    });
+
+    testWidgets('a superseded value render is ignored', (WidgetTester tester) async {
+      final PaletteController c = PaletteController(extractDebounce: Duration.zero);
+      addTearDown(c.dispose);
+      await tester.runAsync(c.loadSample);
+
+      await tester.runAsync(() async {
+        final Future<void> first = c.setGrayscale(true);
+        final Future<void> second = c.setGrayscale(false);
+        await Future.wait(<Future<void>>[first, second]);
+      });
+      expect(c.valueLoading, isFalse);
+      expect(c.valueImage, isNull);
     });
 
     test('settings round trip and invalid values are ignored', () {
@@ -80,6 +135,9 @@ void main() {
         'activeTheme': 'nope',
         'activeHarmony': 'analogous',
         'baseColorIndex': 2,
+        'showLightnessText': false,
+        'grayscale': true,
+        'posterizeLevels': 4,
       });
       expect(c.paletteCount, PaletteController.maxCount);
       expect(c.sortMode, SortMode.hue);
@@ -89,6 +147,12 @@ void main() {
       final Map<String, Object?> json = c.toJson();
       expect(json['sortMode'], 'hue');
       expect(json['baseColorIndex'], 2);
+      expect(json['showLightnessText'], isFalse);
+      expect(json['grayscale'], isTrue);
+      expect(json['posterizeLevels'], 4);
+
+      c.applySettings(<String, Object?>{'posterizeLevels': 9});
+      expect(c.posterizeLevels, 4);
     });
   });
 
@@ -123,6 +187,29 @@ void main() {
       expect(plan.sidebar, isTrue);
       expect(plan.width, greaterThanOrEqualTo(120 + 200));
       expect(plan.height, greaterThanOrEqualTo(400));
+    });
+
+    test('lightness labels need space and keep the strip full width', () {
+      final PaletteCompositePlan strip = PaletteCompositePlan.compute(
+        imageWidth: 900,
+        imageHeight: 600,
+        colors: colors,
+        showHex: true,
+        showRgb: true,
+        showLightness: true,
+      );
+      expect(strip.sidebar, isFalse);
+      expect(strip.swatchWidths.reduce((double a, double b) => a + b), closeTo(900, 1e-6));
+
+      final PaletteCompositePlan narrow = PaletteCompositePlan.compute(
+        imageWidth: 100,
+        imageHeight: 100,
+        colors: colors,
+        showHex: false,
+        showRgb: false,
+        showLightness: true,
+      );
+      expect(narrow.sidebar, isTrue);
     });
 
     test('no labels never needs a sidebar', () {

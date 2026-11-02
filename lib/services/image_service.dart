@@ -1,9 +1,12 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart' show compute;
 import 'package:image/image.dart' as img;
+
+import '../core/value_study.dart';
 
 class _JpegRequest {
   const _JpegRequest(this.rgba, this.width, this.height, this.quality);
@@ -95,6 +98,20 @@ class ImageService {
     if (longest <= maxDim) return (w: w, h: h);
     final double scale = maxDim / longest;
     return (w: math.max(1, (w * scale).round()), h: math.max(1, (h * scale).round()));
+  }
+
+  /// Longest side of the grayscale/posterized copies of an image.
+  static const int valueDim = 2048;
+
+  /// Renders the value study of [image] with [levels] bands, or the full tonal
+  /// range for [fullTonalRange] (caller owns the returned image).
+  static Future<ui.Image> renderValueImage(ui.Image image, int levels) async {
+    final ({int w, int h}) size = fitWithin(image.width, image.height, valueDim);
+    final Uint8List rgba = await sampleRgba(image, maxDim: valueDim);
+    final Uint8List values = await compute(renderValueStudy, ValueStudyRequest(rgba, levels));
+    final Completer<ui.Image> done = Completer<ui.Image>();
+    ui.decodeImageFromPixels(values, size.w, size.h, ui.PixelFormat.rgba8888, done.complete);
+    return done.future;
   }
 
   /// Longest side of persisted copies and their JPEG quality (0-100).

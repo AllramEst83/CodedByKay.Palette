@@ -96,6 +96,33 @@ Rgb hslToRgb(double h, double s, double l) {
 
 double getLuminance(num r, num g, num b) => 0.299 * r + 0.587 * g + 0.114 * b;
 
+/// Decodes an sRGB channel in [0, 1] to linear light.
+double srgbToLinear(double channel) => channel <= 0.04045
+    ? channel / 12.92
+    : math.pow((channel + 0.055) / 1.055, 2.4).toDouble();
+
+double _linearToSrgb(double linear) => linear <= 0.0031308
+    ? linear * 12.92
+    : 1.055 * math.pow(linear, 1 / 2.4).toDouble() - 0.055;
+
+/// CIELAB L* in [0, 100] for a relative luminance (Y) in [0, 1].
+double lightnessFromRelativeLuminance(double y) =>
+    y > 216 / 24389 ? 116 * math.pow(y, 1 / 3).toDouble() - 16 : y * 24389 / 27;
+
+/// Perceptual lightness (CIELAB L*) in [0, 100]: the painter's "value".
+double getLightness(num r, num g, num b) => lightnessFromRelativeLuminance(
+      0.2126 * srgbToLinear(r / 255) +
+          0.7152 * srgbToLinear(g / 255) +
+          0.0722 * srgbToLinear(b / 255),
+    );
+
+/// The sRGB channel value of the neutral gray with the given L*.
+int grayForLightness(double lightness) {
+  final double l = clampDouble(lightness, 0, 100);
+  final double y = l > 8 ? math.pow((l + 16) / 116, 3).toDouble() : l * 27 / 24389;
+  return (_linearToSrgb(y) * 255).round();
+}
+
 /// Threshold above which dark text is used on top of a color.
 const double lightLuminanceThreshold = 140;
 
