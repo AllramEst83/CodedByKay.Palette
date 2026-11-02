@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
@@ -6,6 +7,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/kmeans.dart';
 import '../../core/palette_theme.dart';
+import '../../core/value_study.dart';
 import '../../models/swatch.dart';
 import '../../services/app_messenger.dart';
 import '../../services/export_service.dart';
@@ -38,26 +40,38 @@ Future<void> pickPaletteImage(PaletteController controller) async {
   await controller.loadBytes(picked.first.bytes, name: picked.first.name);
 }
 
+/// Plans the composite for [source]; while a value study is shown, the swatches
+/// are gray and labeled with lightness only, since color codes would not match.
+PaletteCompositePlan _compositePlan(PaletteController c, ui.Image source) {
+  final bool showingValues = c.valueImage != null;
+  return PaletteCompositePlan.compute(
+    imageWidth: source.width,
+    imageHeight: source.height,
+    colors: c.compositeColors,
+    showHex: c.showHexText && !showingValues,
+    showRgb: c.showRgbText && !showingValues,
+    showLightness: c.showLightnessText || showingValues,
+  );
+}
+
 Future<void> exportPaletteComposite(PaletteController controller) async {
   final image = controller.image;
   if (image == null || controller.displayedColors.isEmpty) {
     AppMessenger.show('Nothing to export yet!', isError: true);
     return;
   }
-  final PaletteCompositePlan plan = PaletteCompositePlan.compute(
-    imageWidth: image.width,
-    imageHeight: image.height,
-    colors: controller.displayedColors,
-    showHex: controller.showHexText,
-    showRgb: controller.showRgbText,
-  );
+  final ui.Image? valueImage = controller.valueImage;
+  final PaletteCompositePlan plan = _compositePlan(controller, image);
   try {
     final bytes = await ImageService.renderToPng(
       plan.pixelWidth,
       plan.pixelHeight,
-      (canvas, size) => plan.paint(canvas, size, image),
+      (canvas, size) => plan.paint(canvas, size, valueImage ?? image),
     );
-    await ExportService.savePng(bytes, 'palette-composite.png');
+    await ExportService.savePng(
+      bytes,
+      valueImage == null ? 'palette-composite.png' : 'palette-values.png',
+    );
   } catch (err) {
     AppMessenger.show('Error exporting image: $err', isError: true);
   }
@@ -96,6 +110,20 @@ class PaletteControls extends StatelessWidget {
     'triadic': 'Three hues evenly spaced around the color wheel — balanced and vibrant',
     'tetradic':
         'Four hues evenly spaced around the color wheel — rich and varied',
+  };
+
+  static const Map<int, String> _posterizeLabels = <int, String>{
+    fullTonalRange: 'Off',
+    3: '3',
+    4: '4',
+    5: '5',
+  };
+
+  static const Map<int, String> _posterizeTips = <int, String>{
+    fullTonalRange: 'Keep the full range of grays',
+    3: 'Reduce the image to 3 values',
+    4: 'Reduce the image to 4 values',
+    5: 'Reduce the image to 5 values',
   };
 
   @override
@@ -158,6 +186,35 @@ class PaletteControls extends StatelessWidget {
                 ),
         ),
         ControlSection(
+          title: 'Value check',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Grayscale'),
+                value: c.grayscale,
+                onChanged: c.setGrayscale,
+              ),
+              if (c.grayscale) ...<Widget>[
+                Text(
+                  'Posterize to values. Does the focal point hold the strongest contrast?',
+                  style: Theme.of(context).textTheme.bodySmall
+                      ?.copyWith(color: AppColors.slate400),
+                ),
+                const SizedBox(height: 8),
+                OptionChips<int>(
+                  options: _posterizeLabels,
+                  columns: 4,
+                  selected: c.posterizeLevels,
+                  tooltips: _posterizeTips,
+                  onSelected: c.setPosterizeLevels,
+                ),
+              ],
+            ],
+          ),
+        ),
+        ControlSection(
           title: 'Number of colors',
           trailing: Text('${c.paletteCount} Colors'),
           child: LabeledSlider(
@@ -216,6 +273,12 @@ class PaletteControls extends StatelessWidget {
                 title: const Text('Show RGB text'),
                 value: c.showRgbText,
                 onChanged: c.setShowRgbText,
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Show lightness (L*)'),
+                value: c.showLightnessText,
+                onChanged: c.setShowLightnessText,
               ),
             ],
           ),
@@ -347,7 +410,7 @@ class _PalettePreviewBody extends StatelessWidget {
               ],
             ),
           ),
-          if (c.loading)
+          if (c.loading || c.valueLoading)
             const Positioned(
               top: 0,
               left: 0,
@@ -371,7 +434,7 @@ class _PalettePreviewBody extends StatelessWidget {
             ],
           ),
         ),
-        if (c.loading)
+        if (c.loading || c.valueLoading)
           const Positioned(
             top: 0,
             left: 0,
@@ -396,13 +459,8 @@ class _CompositeView extends StatelessWidget {
         child: ShimmerBox(borderRadius: 16),
       );
     }
-    final PaletteCompositePlan plan = PaletteCompositePlan.compute(
-      imageWidth: image.width,
-      imageHeight: image.height,
-      colors: c.displayedColors,
-      showHex: c.showHexText,
-      showRgb: c.showRgbText,
-    );
+    final ui.Image? valueImage = c.valueImage;
+    final PaletteCompositePlan plan = _compositePlan(c, image);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: <Widget>[
@@ -414,16 +472,20 @@ class _CompositeView extends StatelessWidget {
               maxHeight: MediaQuery.sizeOf(context).height * 0.7,
             ),
             child: Semantics(
-              label:
-                  'Palette preview of ${c.imageName ?? 'image'} with '
-                  '${c.displayedColors.length} colors',
+              label: valueImage == null
+                  ? 'Palette preview of ${c.imageName ?? 'image'} with '
+                        '${c.displayedColors.length} colors'
+                  : 'Value study of ${c.imageName ?? 'image'} in grayscale',
               image: true,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: AspectRatio(
                   aspectRatio: plan.width / plan.height,
                   child: CustomPaint(
-                    painter: PaletteCompositePainter(plan: plan, image: image),
+                    painter: PaletteCompositePainter(
+                      plan: plan,
+                      image: valueImage ?? image,
+                    ),
                   ),
                 ),
               ),
@@ -517,7 +579,8 @@ class SwatchTile extends StatelessWidget {
     return Semantics(
       button: true,
       label:
-          'Swatch ${index + 1}, ${swatch.hex}${isBase ? ', harmony base' : ''}. '
+          'Swatch ${index + 1}, ${swatch.hex}, '
+          'lightness ${swatch.lightness.round()}${isBase ? ', harmony base' : ''}. '
           'Activate to copy.',
       customSemanticsActions: <CustomSemanticsAction, VoidCallback>{
         const CustomSemanticsAction(label: 'Use as harmony base'): onSetBase,
@@ -584,15 +647,38 @@ class SwatchTile extends StatelessWidget {
                     ],
                   ),
                   const Spacer(),
-                  Text(
-                    swatch.hex,
-                    style: TextStyle(
-                      fontFamily: monoFont,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                      color: fg,
-                      letterSpacing: 0.8,
-                    ),
+                  Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            swatch.hex,
+                            style: TextStyle(
+                              fontFamily: monoFont,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                              color: fg,
+                              letterSpacing: 0.8,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Tooltip(
+                        message: 'Lightness (L*), 0 is black and 100 is white',
+                        child: Text(
+                          swatch.lightnessLabel,
+                          style: TextStyle(
+                            fontFamily: monoFont,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                            color: fg,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   Text(
                     swatch.rgbLabel,

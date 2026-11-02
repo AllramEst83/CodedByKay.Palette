@@ -11,6 +11,8 @@ persisted state uses the same `palette-app-state-v1` JSON shape (`version: 1`).
   muted, vivid, dark) or harmonies (complementary, analogous, triadic, tetradic), tap a
   swatch to copy its HEX, long-press / right-click to use it as the harmony base, export a
   PNG with the swatch strip (or sidebar for narrow images).
+- **Value check**: view an image in grayscale or posterized to 3-5 values, and read each
+  swatch's lightness (CIELAB L*) to spot different hues that share a value.
 - **Mood board, grid mode**: columns, gutter, padding, corner radius, cell ratio (including
   the image's original aspect ratio, masonry style), background presets and a custom color,
   reorder/remove items, extract a palette from the selected image, PNG export (1920 px wide).

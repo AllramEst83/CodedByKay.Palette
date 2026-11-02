@@ -7,12 +7,68 @@ import 'package:palette_app/core/dynamic_layout.dart';
 import 'package:palette_app/core/grid_layout.dart';
 import 'package:palette_app/core/kmeans.dart';
 import 'package:palette_app/core/palette_theme.dart';
+import 'package:palette_app/core/value_study.dart';
 import 'package:palette_app/models/swatch.dart';
 
 Uint8List _pixels(List<List<int>> list) =>
     Uint8List.fromList(list.expand((List<int> p) => p).toList());
 
 void main() {
+  group('value study', () {
+    Uint8List rgba(List<List<int>> pixels) =>
+        Uint8List.fromList(pixels.expand((List<int> p) => p).toList());
+
+    test('grayscale keeps each pixel\'s lightness and is opaque', () {
+      final Uint8List out = renderValueStudy(ValueStudyRequest(
+        rgba(<List<int>>[
+          <int>[255, 0, 0, 255],
+          <int>[30, 90, 200, 255],
+          <int>[128, 128, 128, 255],
+        ]),
+        fullTonalRange,
+      ));
+      expect(out[0], grayForLightness(getLightness(255, 0, 0)));
+      expect(out[4], grayForLightness(getLightness(30, 90, 200)));
+      expect(out[8], 128);
+      for (int i = 0; i < out.length; i += 4) {
+        expect((out[i + 1], out[i + 2], out[i + 3]), (out[i], out[i], 255));
+      }
+    });
+
+    test('transparency is flattened onto white', () {
+      final Uint8List out = renderValueStudy(ValueStudyRequest(
+        rgba(<List<int>>[<int>[0, 0, 0, 0]]),
+        fullTonalRange,
+      ));
+      expect(out, <int>[255, 255, 255, 255]);
+    });
+
+    test('posterizing yields exactly the requested number of grays', () {
+      final List<List<int>> ramp = <List<int>>[
+        for (int v = 0; v < 256; v++) <int>[v, v, v, 255],
+      ];
+      for (final int levels in <int>[3, 4, 5]) {
+        final Uint8List out = renderValueStudy(ValueStudyRequest(rgba(ramp), levels));
+        final Set<int> grays = <int>{for (int i = 0; i < out.length; i += 4) out[i]};
+        expect(grays, hasLength(levels));
+      }
+    });
+
+    test('posterizeLightness uses even bands and their midpoints', () {
+      expect(posterizeLightness(0, 3), closeTo(100 / 6, 1e-9));
+      expect(posterizeLightness(50, 3), closeTo(50, 1e-9));
+      expect(posterizeLightness(100, 3), closeTo(500 / 6, 1e-9));
+      expect(posterizeLightness(42, fullTonalRange), 42);
+    });
+
+    test('valueSwatch is gray and keeps its prominence', () {
+      final Swatch s = valueSwatch(Swatch.fromRgb(200, 40, 40, count: 7), 3);
+      expect((s.r, s.g), (s.b, s.b));
+      expect(s.count, 7);
+      expect(s.lightness, closeTo(50, 0.5));
+    });
+  });
+
   group('color utils', () {
     test('rgbToHex pads, clamps and uppercases', () {
       expect(rgbToHex(255, 0, 10), '#FF000A');
@@ -50,6 +106,24 @@ void main() {
       final Rgb a = hslToRgb(-120, 100, 50);
       final Rgb b = hslToRgb(240, 100, 50);
       expect((a.r, a.g, a.b), (b.r, b.g, b.b));
+    });
+
+    test('lightness matches CIELAB L* and inverts through gray', () {
+      expect(getLightness(0, 0, 0), 0);
+      expect(getLightness(255, 255, 255), closeTo(100, 1e-6));
+      expect(getLightness(255, 0, 0), closeTo(53.2, 0.1));
+      expect(getLightness(0, 255, 0), closeTo(87.7, 0.1));
+      expect(getLightness(0, 0, 255), closeTo(32.3, 0.1));
+      for (final int v in <int>[0, 1, 5, 12, 60, 128, 200, 255]) {
+        expect(grayForLightness(getLightness(v, v, v)), v);
+      }
+    });
+
+    test('different hues can share a lightness label', () {
+      final Swatch red = Swatch.fromRgb(255, 0, 0);
+      final int gray = grayForLightness(red.lightness);
+      expect(red.lightnessLabel, 'L 53');
+      expect(Swatch.fromRgb(gray, gray, gray).lightnessLabel, red.lightnessLabel);
     });
 
     test('luminance and hex parsing', () {

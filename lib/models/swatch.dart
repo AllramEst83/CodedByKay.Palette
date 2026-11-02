@@ -52,6 +52,11 @@ class Swatch {
 
   String get rgbLabel => '$r, $g, $b';
 
+  /// Perceptual lightness (CIELAB L*) in [0, 100].
+  double get lightness => getLightness(r, g, b);
+
+  String get lightnessLabel => 'L ${lightness.round()}';
+
   Map<String, Object?> toJson() => <String, Object?>{
         'r': r,
         'g': g,
